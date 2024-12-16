@@ -1,0 +1,42 @@
+##############################
+###   Configuration Yaml   ###
+##############################
+#Copy and edit this config file for all projects
+
+###   Parameters Intended To Be Common Across Workflows    ###
+blklist: ""        #e.g. "/path/to/hg38-blacklist.v2.bed"
+data_dir: ""     #e.g. "/path/to/ProjectName"
+fasta_base: ""       #e.g. "GCA_000001405.15_GRCh38_no_alt_analysis_set" DOES NOT contain path
+genome_fasta: ""        #e.g."/path/to/ref/GCA_000001405.15_GRCh38_no_alt_analysis_set.fna"
+ref_dir: ""        #e.g."/path/to/ref" This should be the directory containing the genome_fasta above
+threads: 4
+raw_fastq: ""        #e.g."/path/to/fastq/cfDNA" This is the path to the directory containing all of the raw fastq 
+frag_bams: ""        #e.g."/path/to/bams" This will be the output directory if starting from fastq
+gc5mb: ""        #e.g."/path/to/ref/gc5mb.bed"
+picardpath: "$PICARDJARPATH/picard.jar" #Path to picard
+
+### Define what paired end reads using for alignment ###
+PE1: "R1" #extension for paired end 1. Default "R1"
+PE2: "R2" #extension for paired end 2. Default "R2"
+
+### Library lists and sample Annotations###
+samples: ""        #This should be a a .tsv file, e.g."/path/to/repos/candetect_cfdna_pipeline/inputs/library_list_format.tsv"
+normal_control: "Healthy" #term listed in "cohort" of library list identifying the healthy controls
+cohorts: ["Healthy"," "] #Cohort names as they appear in the library list e.g. ["Healthy","MPNST"]
+metadata_file: "none" #Option for use if multiple cycles or timepoints. TSV with column names for library name, cohort, cycle. Enter "none" to ignore in dependent scripts
+
+###   Unique properties from this repo   ###
+frag_repo: ""         #e.g."/path/to/repos/candetect_cfdna_pipeline"
+frag_distro: "90_150" #note: bp range of cfDNA fragments (default 90bp to 150bp) for in silico size selection in non-fragmentomic analysis. Format Lowerbound_Upperbound
+
+
+###Specific for DELFI.smk and frag.smk###
+cytoband: ""          #e.g."/path/to/ref/cytoBand.txt"
+
+#### NMF ####
+histogram_width: 1000 #Width in bp of histogram output e.g. 1000
+max_nmf_components: 20 #Maxiumum number of components for fragment size NMF, pipeline will perform NMF with 2 components up to this bound e.g. 2-20
+
+###Specific for End_motifs.smk###
+# F-profile plot appearance 
+fprofile_stacked_title: "" #Stacked bar plot title e.g. "F-profile contributions per sample"

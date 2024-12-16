@@ -1,0 +1,10 @@
+# Ignore hidden directories
+./snake*
+**/.snakemake
+**/.cache
+**/.config
+**/.java
+config/*.yaml
+!config/*default.yaml
+*.sh
+!Default_launch_SMK.sh
