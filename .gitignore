@@ -6,5 +6,4 @@
 **/.java
 config/*.yaml
 !config/*default.yaml
-*.sh
 !Default_launch_SMK.sh
