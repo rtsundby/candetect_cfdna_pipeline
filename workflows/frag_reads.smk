@@ -65,7 +65,7 @@ rule all:
     expand(data_dir + "/analysis/cfdna_wgs/fastqs/{library}_raw_"+ PE1 + ".fastq.gz",
             library = frag_libs["library"],
     ),
-    expand(data_dir + "/analysis/frag/fastqs/{library}_raw_"+ PE2 + ".fastq.gz",
+    expand(data_dir + "/analysis/cfdna_wgs/fastqs/{library}_raw_"+ PE2 + ".fastq.gz",
             library = frag_libs["library"],
     ),
 #frag_index
@@ -408,7 +408,7 @@ rule frag_multiqc:
     resources:
         time="3:00:00"
     input:
-        expand(logdir + "/{library}_frag_fastp.json", library = FRAG_LIBS),
+        expand(logdir + "/fastp/{library}_frag_fastp.json", library = FRAG_LIBS),
         expand(qcdir + "/{library}_{processing}_{read}_fastqc.zip", library = FRAG_LIBS, processing = ["raw", "processed", "unpaired"], read = [PE1,PE2]),
         expand(qcdir + "/{library}_{processing}_samstats.txt", library = FRAG_LIBS, processing = ["raw","filt"]),
         expand(qcdir + "/{library}_{processing}_flagstat.txt", library = FRAG_LIBS, processing = ["raw","filt"]),
