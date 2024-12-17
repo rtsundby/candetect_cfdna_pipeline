@@ -1,6 +1,6 @@
 
 # Introduction
-This repository hosts a snakemake workflow for basic processing and fragmentomic analysis of whole-genome sequencing reads from cell-free DNA. These workflows, written by Jeff Szymanski, R. Taylor Sundby, and Alex C. Pan, were used for the following publicaitons:
+This repository hosts a snakemake workflow for basic processing and fragmentomic analysis of whole-genome sequencing reads from cell-free DNA. These workflows, written by Jeff Szymanski, R. Taylor Sundby, and Alex C. Pan, were used for the following publications:
 
 1.	Szymanski JJ, Sundby RT, Jones PA, Srihari D, Earland N, Harris PK, et al. Cell-free DNA ultra-low-pass whole genome sequencing to distinguish malignant peripheral nerve sheath tumor (MPNST) from its benign precursor lesion: A cross-sectional study. PLOS Medicine. 2021;18(8):e1003734-e. doi: 10.1371/JOURNAL.PMED.1003734.
 
