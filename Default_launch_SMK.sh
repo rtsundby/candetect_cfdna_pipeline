@@ -26,4 +26,4 @@ snakemake -s workflows/frag_reads.smk --configfile config/default.yaml --profile
 #snakemake -s workflows/NMF_size.smk --configfile config/default.yaml --profile profile/
 
 ## START SCRIPT:
-# sbatch --mem=1g --cpus-per-task=2 --time=120:00:00 --mail-type=BEGIN,TIME_LIMIT_90,END /path/to/repos/candetect_cfdna_pipeline/Default_lauch_SMK.sh #copy and paste this line, updated with paths, to terminal on the HPC to launch the smk pipeline
+# sbatch --mem=1g --cpus-per-task=2 --time=120:00:00 --mail-type=BEGIN,TIME_LIMIT_90,END /path/to/repos/candetect_cfdna_pipeline/Default_launch_SMK.sh #copy and paste this line, updated with paths, to terminal on the HPC to launch the smk pipeline
