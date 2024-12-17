@@ -383,7 +383,6 @@ rule delfi_model:
         script = frag_scriptdir + "/delfi_model.py",
         c1 = lambda wildcards: wildcards.c1,
         c2 = lambda wildcards: wildcards.c2,
-        log_dir = logdir + "/delfi",
         use_existing_model = lambda wildcards: frag_frag + f"/model/{wildcards.c1}_v_{wildcards.c2}.pkl" if os.path.exists(frag_frag + f"/model/{wildcards.c1}_v_{wildcards.c2}.pkl") else None,
         name = "{c1}_v_{c2}",
         log_dir = logdir + "/delfi/model",
