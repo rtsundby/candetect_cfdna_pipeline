@@ -178,37 +178,51 @@ rule nmf:
         nc = lambda wildcards: wildcards.nc,
         c1 = lambda wildcards: wildcards.c1,
         c2 = lambda wildcards: wildcards.c2,
-        model = lambda wildcards: nmf_dir + f"/model/{wildcards.c1}_v_{wildcards.c2}.n={wildcards.nc}.pkl",
         name = lambda wildcards: f"{wildcards.c1}_v_{wildcards.c2}.n={wildcards.nc}",
+        existing_model_dir=lambda wildcards: config["existing_nmf_model"],
+        model_symlink=lambda wildcards: nmf_dir + f"/model/{wildcards.c1}_v_{wildcards.c2}.n={wildcards.nc}.pkl",
     shell:
         """
-        mkdir -p {params.out_dir} {params.log_dir}
+        mkdir -p {params.out_dir} {params.out_dir}/model {params.log_dir}
 
-        # Existing model
+        # Seach for specific existing model .pkl (w/ all permations of nc and c1), symlink
         if [ "{input.existing_model}" != "None" ]; then
-            echo "Using existing model: {params.model}"
-            python3 {params.script} \
-                --freq_csv {input} \
-                --samplelist {params.samplelist} \
-                --n_components {wildcards.nc} \
-                --cohort1 {params.c1} \
-                --cohort2 {params.c2} \
-                --out_dir {params.out_dir} \
-                --existing_model {params.model} \
-                --name {params.name} \
-                &> {log}
-        else
-            echo "Model does not exist, creating new model"
-            python3 {params.script} \
-                --freq_csv {input} \
-                --samplelist {params.samplelist} \
-                --n_components {params.nc} \
-                --cohort1 {params.c1} \
-                --cohort2 {params.c2} \
-                --out_dir {params.out_dir} \
-                --name {params.name} \
-                &> {log}
+            echo "Using existing model directory: {input.existing_model}"
+            existing_model_file={params.existing_model_dir}/{wildcards.c1}_v_{wildcards.c2}.n={wildcards.nc}.pkl
+            if [ -f "$existing_model_file" ]; then
+                echo "Found existing model: $existing_model_file"
+            # Check if symlink already exists
+                if [ ! -e {params.model_symlink} ]; then
+                    echo "Creating symlink to output directory: {params.model_symlink}"
+                    ln -sf "$existing_model_file" {params.model_symlink}
+                else
+                    echo "Symlink already exists: {params.model_symlink}, skipping creation."
+                fi
+            else
+                echo "No existing model found for {wildcards.c1}_v_{wildcards.c2}.n={wildcards.nc}"
+            fi
         fi
+
+        #  Determine if using an existing model or training a new one using symlink
+        if [ -f {params.model_symlink} ]; then
+            existing_model="{params.model_symlink}"
+            echo "Using existing model: $existing_model"
+        else
+            existing_model=""
+            echo "No model found. Training a new one."
+        fi
+
+        # Run the model script
+        python3 {params.script} \
+            --freq_csv {input.freq_csv} \
+            --samplelist {params.samplelist} \
+            --n_components {wildcards.nc} \
+            --cohort1 {wildcards.c1} \
+            --cohort2 {wildcards.c2} \
+            --out_dir {params.out_dir} \
+            --existing_model $existing_model \
+            --name {params.name} \
+            &> {log}
         """
 rule nmf_aucs:
     resources:
