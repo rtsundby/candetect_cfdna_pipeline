@@ -11,7 +11,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
-parser.add_argument("--freq_csv", help='Path to frequency histogram data (input)', required=True)
+parser.add_argument("--freq_csv", help="Path to input frequency histogram data (CSV file)")
 parser.add_argument("--samplelist", help='Path to samplelist (input)', required=True)
 parser.add_argument("--n_components", help='Number of nmf components (input)', type=int, required=True)
 parser.add_argument("--cohort1", help='First cohort in comparison (input)', required=True)
@@ -48,9 +48,13 @@ os.makedirs(probs_dir, exist_ok=True)
 print("\n\n---------------- Preparing Data ----------------\n")
 #cohorts_df = pd.read_csv(SAMPLELIST, index_col=0)
 cohorts_df = pd.read_csv(SAMPLELIST, sep="\t", index_col=0)
-
 cohorts_df = cohorts_df.loc[cohorts_df["cohort"].isin([COHORT1,COHORT2])]
-# enforce ordering
+
+if cohorts_df.empty:
+    raise ValueError(f"No samples found for cohorts: {COHORT1}, {COHORT2}")
+
+
+# Enforce ordering
 print(cohorts_df.columns)
 cohorts_df["cohort_int"] = cohorts_df["cohort"].map({COHORT1: 0, COHORT2: 1})
 cohorts_df['index_col'] = cohorts_df.index
@@ -71,7 +75,9 @@ if EXISTING_MODEL and os.path.exists(EXISTING_MODEL):
     with open(EXISTING_MODEL, 'rb') as f:
         best_clf = pickle.load(f)
 else:
-    print("\n\n---------------- Running Model ----------------\n")
+    # Handle case when existing_model is empty or doesn't exist
+    print("\n\n---------------- No Existing Model Found ----------------\n")
+    print(f"Training a new model with {N_COMPONENTS} components...")
     nmf = NMF(n_components=N_COMPONENTS,
               init='random',
               random_state=model.RANDOM_SEED,
@@ -95,8 +101,10 @@ else:
     )
 
     # Save the best classifier as a pickle object
-    with open(f'{models_dir}/{name}.pkl', 'wb') as f:
+    model_output_file = f'{models_dir}/{name}.pkl'
+    with open(model_output_file, 'wb') as f:
         pickle.dump(best_clf, f)
+    print(f"New model trained and saved: {model_output_file}")
 
 # Regardless of whether the model was loaded or created, get coefficients and probabilities
 best_coeffs_df, prob_df = model.get_coeffs_and_probs(
@@ -108,3 +116,7 @@ best_coeffs_df, prob_df = model.get_coeffs_and_probs(
 # Save outputs
 best_coeffs_df.to_csv(f"{coeffs_dir}/{name}.csv")
 prob_df.to_csv(f"{probs_dir}/{name}.csv")
+
+print("\n---------------- Model Training Complete ----------------")
+print(f"Saved coefficients to: {coeffs_dir}/{name}.csv")
+print(f"Saved probabilities to: {probs_dir}/{name}.csv")

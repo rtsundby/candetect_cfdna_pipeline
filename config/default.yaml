@@ -25,6 +25,12 @@ normal_control: "Healthy" #term listed in "cohort" of library list identifying t
 cohorts: ["Healthy"," "] #Cohort names as they appear in the library list e.g. ["Healthy","MPNST"]
 metadata_file: "none" #Option for use if multiple cycles or timepoints. TSV with column names for library name, cohort, cycle. Enter "none" to ignore in dependent scripts
 
+### Do previous models exist or would you like to train a new model? ####
+existing_nmf_model: "no" # Value must be "no" if you would like to train a new model. If a model does exist, give path to directory with associated .pkl(s) e.g. "/path/to/model/"
+existing_delfi_model: "no" # Value must be "no" if you would like to train a new model. If a model does exist, give path to directory with associated .pkl(s) e.g. "/path/to/model/"
+existing_motif_model: "no" # Value must be "no" if you would like to train a new model. If a model does exist, give path to directory with associated .pkl(s) e.g. "/path/to/model/"
+
+
 ###   Unique properties from this repo   ###
 frag_repo: ""         #e.g."/path/to/repos/candetect_cfdna_pipeline"
 frag_distro: "90_150" #note: bp range of cfDNA fragments (default 90bp to 150bp) for in silico size selection in non-fragmentomic analysis. Format Lowerbound_Upperbound

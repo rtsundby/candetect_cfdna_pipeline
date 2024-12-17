@@ -161,10 +161,13 @@ rule nmf:
         mem_gb="16g",
         cpus="8",
     input:
-        nmf_agg_hist_dir + "/freq_histogram.30_700.csv",
+        freq_csv = nmf_agg_hist_dir + "/freq_histogram.30_700.csv",
+        existing_model = lambda wildcards: config["existing_nmf_model"] \
+            if config["existing_nmf_model"] != "no" else None,
     output:
         probs = nmf_dir + "/probs/{c1}_v_{c2}.n={nc}.csv",
         coeffs = nmf_dir + "/coeffs/{c1}_v_{c2}.n={nc}.csv",
+        model = nmf_dir + "/model/{c1}_v_{c2}.n={nc}.pkl",
     log:
         logdir + "/nmf/model/{c1}_v_{c2}.n={nc}.log"
     params:
@@ -172,7 +175,6 @@ rule nmf:
         log_dir = logdir + "/nmf/model",
         script  = frag_scriptdir + "/nmf_model.py",
         samplelist = samples,
-        #nc = "2-"(config["max_nmf_components"]+1),
         nc = lambda wildcards: wildcards.nc,
         c1 = lambda wildcards: wildcards.c1,
         c2 = lambda wildcards: wildcards.c2,
@@ -182,8 +184,8 @@ rule nmf:
         """
         mkdir -p {params.out_dir} {params.log_dir}
 
-        # Check for existing model
-        if [ -f {params.model} ]; then
+        # Existing model
+        if [ "{input.existing_model}" != "None" ]; then
             echo "Using existing model: {params.model}"
             python3 {params.script} \
                 --freq_csv {input} \
