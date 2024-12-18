@@ -125,7 +125,7 @@ rule all:
         ),
 #frag_plotcoverage
     qcdir + "/frag_coverage.tsv",
-    qcdir + "/frag_coverage.pd",
+    qcdir + "/frag_coverage.pdf",
 #frag_multiqc
     qcdir + "/frag_multiqc.html",
     qcdir + "/frag_multiqc_data/multiqc_fastqc.txt",
@@ -388,7 +388,7 @@ rule frag_plotcoverage:
     log: logdir + "/frag_plotcoverage.log",
     output:
         raw = qcdir + "/frag_coverage.tsv",
-        plot = qcdir + "/frag_coverage.pd",
+        plot = qcdir + "/frag_coverage.pdf",
     params:
         blacklist = config["blklist"],
         script = frag_scriptdir+ "/plotcoverage.sh",
