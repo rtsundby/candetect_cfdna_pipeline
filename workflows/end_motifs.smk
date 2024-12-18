@@ -148,18 +148,60 @@ rule f_profile:
     output: 
         fprofile_per_lib = data_dir + "/analysis/cfdna_wgs/features/fprofiles.tsv",
         motif_per_fprofile = data_dir + "/analysis/cfdna_wgs/features/motif_per_fprofile.tsv",
+        model_dir = directory(data_dir + "/analysis/cfdna_wgs/features/fprofile_model/"),
     params:
-        script = frag_scriptdir + "/fprofiles.py",
+        script = frag_scriptdir + "/fprofiles_pkl.py",
         log_dir = logdir + "/motifs/f_profile",
-    shell:
-        """
-        mkdir -p {params.log_dir}
-        module load python
-        {params.script} --data_file {input} \
-        --output_fprof_per_lib {output.fprofile_per_lib} \
-        --output_motif_per_fprof {output.motif_per_fprofile} \
-        > {log} 2>&1
-        """
+        existing_model = config["existing_motif_model"],
+    run:
+        import os
+        import shutil
+        os.makedirs(output.model_dir, exist_ok=True)
+
+        # If loading an existing model, create symlink for pkl into output model_dir
+        if params.existing_model != "no":
+            model_file = os.path.join(params.existing_model, "fprofile_model.pkl")
+            symlink_target = os.path.join(output.model_dir, "fprofile_model.pkl")
+
+            # Create a symlink to the existing model if it doesn't already exist
+            if not os.path.exists(symlink_target):
+                if os.path.exists(model_file):
+                    shutil.copy(model_file, symlink_target)
+                    print(f"Symlink created for existing model: {symlink_target}")
+                else:
+                    raise FileNotFoundError(f"Specified model file not found: {model_file}")
+
+            # Use the existing model for analysis
+            shell(f"""
+            mkdir -p {params.log_dir}
+            module load python
+            {params.script} --data_file {input.data_file} \
+            --output_fprof_per_lib {output.fprofile_per_lib} \
+            --output_motif_per_fprof {output.motif_per_fprofile} \
+            --load_model {symlink_target} \
+            > {log} 2>&1
+            """)
+        else:
+            # Train a new model and save it in the output model_dir
+            model_output = os.path.join(output.model_dir, "fprofile_model.pkl")
+            shell(f"""
+            mkdir -p {params.log_dir}
+            module load python
+            {params.script} --data_file {input.data_file} \
+            --output_fprof_per_lib {output.fprofile_per_lib} \
+            --output_motif_per_fprof {output.motif_per_fprofile} \
+            --save_model {model_output} \
+            > {log} 2>&1
+            """)
+#    shell:
+#        """
+#        mkdir -p {params.log_dir}
+#        module load python
+#        {params.script} --data_file {input} \
+#        --output_fprof_per_lib {output.fprofile_per_lib} \
+#        --output_motif_per_fprof {output.motif_per_fprofile} \
+#        > {log} 2>&1
+#        """
 rule f_profile_plot:
     input: data_dir + "/analysis/cfdna_wgs/features/fprofiles.tsv",
     log: logdir + "/f-profile_plot.log",
