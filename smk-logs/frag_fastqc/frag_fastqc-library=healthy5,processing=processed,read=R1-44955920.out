@@ -1,0 +1,25 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 30
+Rules claiming more threads will be scaled down.
+Provided resources: mem_mb=120000, mem_mib=114441, disk_mb=8963, disk_mib=8548, cpus=30
+Select jobs to execute...
+
+[Mon Jan 13 11:47:51 2025]
+rule frag_fastqc:
+    input: /data/ShernLiquidBx/candetect_test_train/fastq/healthy5_processed_R1.fastq.gz
+    output: /data/ShernLiquidBx/candetect_test_train/qc/healthy5_processed_R1_fastqc.html, /data/ShernLiquidBx/candetect_test_train/qc/healthy5_processed_R1_fastqc.zip
+    log: /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/fastqc/healthy5_processed_R1_frag_fastqc.log
+    jobid: 0
+    benchmark: /data/ShernLiquidBx/candetect_test_train/benchmark/healthy5_processed_R1_frag_fastqc.benchmark.txt
+    reason: Forced execution
+    wildcards: library=healthy5, processing=processed, read=R1
+    resources: mem_mb=120000, mem_mib=114441, disk_mb=8963, disk_mib=8548, tmpdir=/tmp, time=48:00:00, cpus=30
+
+
+        mkdir -p /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/fastqc
+        /data/sundbyrt/repos/candetect_cfdna_pipeline/scripts/fastqc.sh         /data/ShernLiquidBx/candetect_test_train/fastq/healthy5_processed_R1.fastq.gz         /data/ShernLiquidBx/candetect_test_train/qc         4 &> /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/fastqc/healthy5_processed_R1_frag_fastqc.log
+        
+[Mon Jan 13 11:52:54 2025]
+Finished job 0.
+1 of 1 steps (100%) done

@@ -1,0 +1,22 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 30
+Rules claiming more threads will be scaled down.
+Provided resources: mem_mb=120000, mem_mib=114441, disk_mb=45430, disk_mib=43326, cpus=30
+Select jobs to execute...
+
+[Mon Jan 13 10:45:35 2025]
+rule symlink_inputs:
+    input: /data/ShernLiquidBx/SARC031/fastq/cfDNA/10_EIT_Cy7_019_007_S10_R1_001.fastq.gz
+    output: /data/ShernLiquidBx/candetect_test_train/fastq/IAX_Cy3_raw_R1.fastq.gz, /data/ShernLiquidBx/candetect_test_train/fastq/IAX_Cy3_raw_R3.fastq.gz
+    jobid: 0
+    reason: Forced execution
+    wildcards: library=IAX_Cy3
+    resources: mem_mb=120000, mem_mib=114441, disk_mb=45430, disk_mib=43326, tmpdir=/tmp, time=48:00:00, cpus=30
+
+
+        /data/sundbyrt/repos/candetect_cfdna_pipeline/scripts/symlink.sh         /data/ShernLiquidBx/SARC031/fastq/cfDNA/10_EIT_Cy7_019_007_S10_R1_001.fastq.gz         /data/ShernLiquidBx/candetect_test_train/fastq/IAX_Cy3_raw_R1.fastq.gz         /data/ShernLiquidBx/candetect_test_train/fastq/IAX_Cy3_raw_R3.fastq.gz         /data/ShernLiquidBx/candetect_test_train/fastq
+        
+[Mon Jan 13 10:45:35 2025]
+Finished job 0.
+1 of 1 steps (100%) done

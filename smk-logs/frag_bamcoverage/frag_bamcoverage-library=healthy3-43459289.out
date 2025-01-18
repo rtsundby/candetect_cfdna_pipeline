@@ -1,0 +1,24 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 30
+Rules claiming more threads will be scaled down.
+Provided resources: mem_mb=120000, mem_mib=114441, disk_mb=13395, disk_mib=12775, cpus=30
+Select jobs to execute...
+
+[Thu Dec 19 13:42:37 2024]
+rule frag_bamcoverage:
+    input: /data/ShernLiquidBx/candetect_test_train/bams/healthy3_filt.bam
+    output: /data/ShernLiquidBx/candetect_test_train/qc/healthy3_bamcoverage.bg
+    log: /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/healthy3_frag_bamcoverage.log
+    jobid: 0
+    benchmark: /data/ShernLiquidBx/candetect_test_train/benchmark/healthy3_frag_bamcoverage.benchmark.txt
+    reason: Forced execution
+    wildcards: library=healthy3
+    resources: mem_mb=120000, mem_mib=114441, disk_mb=13395, disk_mib=12775, tmpdir=/tmp, time=48:00:00, cpus=30
+
+
+        /data/sundbyrt/repos/candetect_cfdna_pipeline/scripts/bamcoverage.sh         /data/ShernLiquidBx/candetect_test_train/bams/healthy3_filt.bam         /data/ShernLiquidBx/candetect_test_train/qc/healthy3_bamcoverage.bg         10000         /data/sundbyrt/reference/GRCh38/hg38-blacklist.v2.bed         4 &> /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/healthy3_frag_bamcoverage.log
+        
+[Thu Dec 19 13:51:03 2024]
+Finished job 0.
+1 of 1 steps (100%) done

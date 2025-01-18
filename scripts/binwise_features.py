@@ -6,13 +6,13 @@ import re
 from sklearn.preprocessing import StandardScaler
 
 parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
-parser.add_argument("--armz_csv", help='Path to delfi arm-level z-scores .csv (input)', required=True)
+parser.add_argument("--armz_csv", help='Path to bin wise fragmentomic arm-level z-scores .csv (input)', required=True)
 parser.add_argument("--ratio_tsv", help='Path to ratio .tsv (input)', required=True)
 parser.add_argument("--out_dir", help='Path to output directory', required=True)
 
 args = parser.parse_args()
-DELFI_ZSCORE_CSV = args.armz_csv
-DELFI_RATIO_TSV = args.ratio_tsv
+BINWISE_ZSCORE_CSV = args.armz_csv
+BINWISE_RATIO_TSV = args.ratio_tsv
 OUT_DIR = args.out_dir
 
 os.makedirs(OUT_DIR,exist_ok=True)
@@ -73,40 +73,40 @@ def arm_key(arm_str):
     return int(arm_int), arm_letter
 
 ################################################################################
-# DELFI z-score
+# Bin wise fragmentomics z-score
 ################################################################################
-# This is already mostly done from the delfi_armz.R script. Just need to order
+# This is already mostly done from the binwise_armz.R script. Just need to order
 # arms numerically and clean any empty rows (should be none)
-print("Processing DELFI z-score data")
+print("Processing bin wise fragmentomic z-score data")
 
-zscores_df = pd.read_csv(DELFI_ZSCORE_CSV, index_col=0)
+zscores_df = pd.read_csv(BINWISE_ZSCORE_CSV, index_col=0)
 cols = zscores_df.columns
 sorted_cols = sorted(cols, key=arm_key)
 zscores_df = zscores_df[sorted_cols]
 print(zscores_df)
-zscores_df.to_csv(OUT_DIR + "/delfi_armz.sorted.csv")
+zscores_df.to_csv(OUT_DIR + "/binwise_armz.sorted.csv")
 
 zscores_df = clean_df(zscores_df)
 print(zscores_df)
-zscores_df.to_csv(OUT_DIR + "/delfi_armz.clean.csv")
+zscores_df.to_csv(OUT_DIR + "/binwise_armz.clean.csv")
 
-print("Finished processing DELFI z-score data")
+print("Finished processing bin wise fragmentomic z-score data")
 
 ################################################################################
-# DELFI ratio
+# Bin-wise fragmentomic ratio
 ################################################################################
-print("Processing DELFI ratio data")
+print("Processing bin wise fragmentomic ratio data")
 
-delfi_df = pd.read_csv(DELFI_RATIO_TSV, sep="\t")
-delfi_df.columns = ["library","chr","start","end","fract","ratio.centered"]
-lib_ids = delfi_df["library"].unique()
+binwise_df = pd.read_csv(BINWISE_RATIO_TSV, sep="\t")
+binwise_df.columns = ["library","chr","start","end","fract","ratio.centered"]
+lib_ids = binwise_df["library"].unique()
 
 # Treat ["chr","start","end"] as keys to merge each lib's fract as cols
 index_cols = ["chr","start","end"]
 ratios_df = pd.DataFrame(columns=index_cols)
 for lib_id in lib_ids:
     print(lib_id)
-    lib_df = delfi_df.loc[(delfi_df['library'] == lib_id)]
+    lib_df = binwise_df.loc[(binwise_df['library'] == lib_id)]
     ratios_df = pd.merge(ratios_df, lib_df[index_cols + ["fract"]], how="outer", on=index_cols)
     ratios_df.rename(columns={"fract":lib_id}, inplace=True)
 
@@ -114,12 +114,12 @@ sort_by_chromosome(ratios_df, ["start"])
 merge_index_columns(ratios_df, index_cols, join_str="_", remove_chr=True)
 ratios_df = ratios_df.T # set libs as rows, bins as cols
 print(ratios_df)
-ratios_df.to_csv(OUT_DIR + "/delfi_ratio.raw.csv")
+ratios_df.to_csv(OUT_DIR + "/binwise_ratio.raw.csv")
 
 # NOTE: this drops 9/322 columns.
 ratios_df = clean_df(ratios_df)
 print(ratios_df)
-ratios_df.to_csv(OUT_DIR + "/delfi_ratio.clean.csv")
+ratios_df.to_csv(OUT_DIR + "/binwise_ratio.clean.csv")
 
 ## checking scikit normalization - yields same result as StandardScaler
 # from scipy import stats
@@ -140,6 +140,6 @@ print(ratios_df)
 # issue, but values will be pretty close.
 print(ratios_df.mean(axis=1)) # check row mean is 0
 print(ratios_df.std(axis=1)) # check row std-dev is 1
-ratios_df.to_csv(OUT_DIR + "/delfi_ratio.norm_rows.clean.csv")
+ratios_df.to_csv(OUT_DIR + "/binwise_ratio.norm_rows.clean.csv")
 
-print("Finished processing DELFI ratio data")
+print("Finished processing bin-wise fragmentomic ratio data")

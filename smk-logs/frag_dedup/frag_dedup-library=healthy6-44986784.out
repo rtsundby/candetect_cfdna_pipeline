@@ -1,0 +1,25 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 30
+Rules claiming more threads will be scaled down.
+Provided resources: mem_mb=120000, mem_mib=114441, disk_mb=19299, disk_mib=18405, cpus=30
+Select jobs to execute...
+
+[Mon Jan 13 17:55:44 2025]
+rule frag_dedup:
+    input: /data/ShernLiquidBx/candetect_test_train/bams/healthy6_raw.bam
+    output: /data/ShernLiquidBx/candetect_test_train/bams/healthy6_dedup.bam
+    log: /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/dedup/healthy6_frag_dedup.log
+    jobid: 0
+    benchmark: /data/ShernLiquidBx/candetect_test_train/benchmark/healthy6_frag_dedup.benchmark.txt
+    reason: Forced execution
+    wildcards: library=healthy6
+    resources: mem_mb=120000, mem_mib=114441, disk_mb=19299, disk_mib=18405, tmpdir=/tmp, time=48:00:00, cpus=30
+
+
+        mkdir -p /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/dedup
+        /data/sundbyrt/repos/candetect_cfdna_pipeline/scripts/dedup.sh         /data/ShernLiquidBx/candetect_test_train/bams/healthy6_raw.bam         /data/ShernLiquidBx/candetect_test_train/bams/healthy6_dedup.bam         4 &> /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/dedup/healthy6_frag_dedup.log
+        
+[Mon Jan 13 18:54:36 2025]
+Finished job 0.
+1 of 1 steps (100%) done

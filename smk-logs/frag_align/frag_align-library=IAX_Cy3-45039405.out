@@ -1,0 +1,25 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 30
+Rules claiming more threads will be scaled down.
+Provided resources: mem_mb=180000, mem_mib=171662, disk_mb=54344, disk_mib=51827, cpus=30
+Select jobs to execute...
+
+[Tue Jan 14 11:02:10 2025]
+rule frag_align:
+    input: /data/ShernLiquidBx/ref/GCA_000001405.15_GRCh38_no_alt_analysis_set.fna, /data/ShernLiquidBx/candetect_test_train/fastq/IAX_Cy3_processed_R1.fastq.gz, /data/ShernLiquidBx/candetect_test_train/fastq/IAX_Cy3_processed_R3.fastq.gz
+    output: /data/ShernLiquidBx/candetect_test_train/bams/IAX_Cy3_raw.bam, /data/ShernLiquidBx/candetect_test_train/bams/IAX_Cy3_raw.bam.bai
+    log: /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/align/IAX_Cy3_frag_align.log
+    jobid: 0
+    benchmark: /data/ShernLiquidBx/candetect_test_train/benchmark/IAX_Cy3_frag_align.benchmark.txt
+    reason: Forced execution
+    wildcards: library=IAX_Cy3
+    resources: mem_mb=180000, mem_mib=171662, disk_mb=54344, disk_mib=51827, tmpdir=/tmp, time=72:00:00, cpus=30
+
+
+        mkdir -p /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/align
+        /data/sundbyrt/repos/candetect_cfdna_pipeline/scripts/align.sh         /data/ShernLiquidBx/ref/GCA_000001405.15_GRCh38_no_alt_analysis_set.fna         /data/ShernLiquidBx/candetect_test_train/fastq/IAX_Cy3_processed_R1.fastq.gz         /data/ShernLiquidBx/candetect_test_train/fastq/IAX_Cy3_processed_R3.fastq.gz         4         /data/ShernLiquidBx/candetect_test_train/bams/IAX_Cy3_raw.bam &> /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/align/IAX_Cy3_frag_align.log
+        
+[Tue Jan 14 22:54:51 2025]
+Finished job 0.
+1 of 1 steps (100%) done

@@ -1,0 +1,35 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 30
+Rules claiming more threads will be scaled down.
+Provided resources: mem_mb=120000, mem_mib=114441, disk_mb=22973, disk_mib=21909, cpus=30
+Select jobs to execute...
+
+[Wed Jan 15 03:51:29 2025]
+rule frag_bamcoverage:
+    input: /data/ShernLiquidBx/candetect_test_train/bams/KAT_Cy5_filt.bam
+    output: /data/ShernLiquidBx/candetect_test_train/qc/KAT_Cy5_bamcoverage.bg
+    log: /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/KAT_Cy5_frag_bamcoverage.log
+    jobid: 0
+    benchmark: /data/ShernLiquidBx/candetect_test_train/benchmark/KAT_Cy5_frag_bamcoverage.benchmark.txt
+    reason: Forced execution
+    wildcards: library=KAT_Cy5
+    resources: mem_mb=120000, mem_mib=114441, disk_mb=22973, disk_mib=21909, tmpdir=/tmp, time=48:00:00, cpus=30
+
+
+        /data/sundbyrt/repos/candetect_cfdna_pipeline/scripts/bamcoverage.sh         /data/ShernLiquidBx/candetect_test_train/bams/KAT_Cy5_filt.bam         /data/ShernLiquidBx/candetect_test_train/qc/KAT_Cy5_bamcoverage.bg         10000         /data/sundbyrt/reference/GRCh38/hg38-blacklist.v2.bed         4 &> /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/KAT_Cy5_frag_bamcoverage.log
+        
+[Wed Jan 15 03:52:13 2025]
+Error in rule frag_bamcoverage:
+    jobid: 0
+    input: /data/ShernLiquidBx/candetect_test_train/bams/KAT_Cy5_filt.bam
+    output: /data/ShernLiquidBx/candetect_test_train/qc/KAT_Cy5_bamcoverage.bg
+    log: /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/KAT_Cy5_frag_bamcoverage.log (check log file(s) for error details)
+    shell:
+        
+        /data/sundbyrt/repos/candetect_cfdna_pipeline/scripts/bamcoverage.sh         /data/ShernLiquidBx/candetect_test_train/bams/KAT_Cy5_filt.bam         /data/ShernLiquidBx/candetect_test_train/qc/KAT_Cy5_bamcoverage.bg         10000         /data/sundbyrt/reference/GRCh38/hg38-blacklist.v2.bed         4 &> /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/KAT_Cy5_frag_bamcoverage.log
+        
+        (one of the commands exited with non-zero exit code; note that snakemake uses bash strict mode!)
+
+Shutting down, this might take some time.
+Exiting because a job execution failed. Look above for error message

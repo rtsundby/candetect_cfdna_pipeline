@@ -8,44 +8,39 @@ import numpy as np
 import os
 
 # Values directly from configuration file
-samples = config["samples"]
-threads = config["threads"]
-FRAG_DISTROS = config["frag_distro"]
-frag_threads = config["threads"]
-genome_fasta = config["genome_fasta"]
-frag_repo = config["frag_repo"]
-PE1 = config.get("PE1", "need to define PE1")
-print(f"PE1: {PE1}")
-PE2 = config.get("PE2", "need to define PE2")
-print(f"PE2: {PE2}")
-fasta_base = config["fasta_base"]
-lib_path = config["raw_fastq"]
+bwa_dir             = config["ref_dir"]
+COHORTS             = config["cohorts"]
+data_dir            = config["data_dir"]
+fasta_base          = config["fasta_base"]
+FRAG_DISTROS        = config["frag_distro"]
+frag_repo           = config["frag_repo"]
+frag_threads        = config["threads"]
+genome_fasta        = config["genome_fasta"]
+metadata_file       = config["metadata_file"]
+normal_control      = config.get("normal_control", "healthy")  # Default to "healthy" if not defined
+PE1                 = config.get("PE1", "need to define PE1")
+PE2                 = config.get("PE2", "need to define PE2")
+refdir              = config["ref_dir"]
+samples             = config["samples"]
+threads             = config["threads"]
 
 # Directory values derived from data_dir in configuration YAML
-data_dir             = config["data_dir"]
-frag                 = data_dir + "/analysis/frag"
-frag_bams            = data_dir + "/analysis/cfdna_wgs/bams"
-frag_fastqs          = data_dir + "/analysis/cfdna_wgs/fastqs"
-frag_frag            = data_dir + "/analysis/frag/frag"
-frag_frag_beds       = data_dir + "/analysis/frag/frag/beds"
-frag_frag_counts     = data_dir + "/analysis/frag/frag/counts"
-frag_frag_gc_distros = data_dir + "/analysis/frag/frag/distros"
-qcdir                = data_dir + "/analysis/qc"
-bench_dir             = data_dir + "/benchmark"
-logdir               = data_dir + "/logs/preprocessing"
-refdir               = config["ref_dir"]
-bwa_dir              = config["ref_dir"]
-frag_scriptdir = config["frag_repo"] +  "/scripts"
+bench_dir           = data_dir + "/benchmark"
+frag                = data_dir + "/analysis/cfdna_wgs"
+frag_bams           = data_dir  + "/bams"
+frag_fastqs         = data_dir  + "/fastq"
+frag_scriptdir      = frag_repo +  "/scripts"
+logdir              = data_dir + "/logs/preprocessing"
+qcdir               = data_dir  + "/qc"
 
 #Make sure logdir exists
 os.makedirs(logdir, exist_ok=True)
 
-# Read samples
+####------ Read samples ------####
 frag_libs = pd.read_table(config["samples"])
 
 # Ensure readable fastqs
 readable = []
-#for x in lib_path + "/" + frag_libs["r1_basename"]:
 for x in frag_libs.file:
     readable.append(os.access(x, os.R_OK))
 frag_libs['readable']=readable
@@ -62,10 +57,10 @@ FRAG_HEALTHY_LIBRARIES = frag_libs[frag_libs['cohort'] == 'healthy']['library'].
 rule all:
   input: 
 #symlinks
-    expand(data_dir + "/analysis/cfdna_wgs/fastqs/{library}_raw_"+ PE1 + ".fastq.gz",
+    expand(frag_fastqs + "/{library}_raw_"+ PE1 + ".fastq.gz",
             library = frag_libs["library"],
     ),
-    expand(data_dir + "/analysis/cfdna_wgs/fastqs/{library}_raw_"+ PE2 + ".fastq.gz",
+    expand(frag_fastqs + "/{library}_raw_"+ PE2 + ".fastq.gz",
             library = frag_libs["library"],
     ),
 #frag_index
@@ -140,8 +135,8 @@ rule symlink_inputs:
     input:
         lambda wildcards: frag_lib_dict[wildcards.library],
     output:
-        read1 = data_dir + "/analysis/cfdna_wgs/fastqs/{library}_raw_"+ PE1 + ".fastq.gz",
-        read2 = data_dir + "/analysis/cfdna_wgs/fastqs/{library}_raw_"+ PE2 + ".fastq.gz",
+        read1 = frag_fastqs + "/{library}_raw_"+ PE1 + ".fastq.gz",
+        read2 = frag_fastqs + "/{library}_raw_"+ PE2 + ".fastq.gz",
     params:
         outdir = frag_fastqs,
         script = frag_scriptdir+ "/symlink.sh",
@@ -196,6 +191,7 @@ rule frag_fastp:
         mkdir -p {params.log_dir}
         module load fastp
         fastp --detect_adapter_for_pe \
+            --disable_length_filtering \
             --failed_out {output.failed} \
             --in1 {input.read1} \
             --in2 {input.read2} \
@@ -225,6 +221,7 @@ rule frag_align:
         log_dir = logdir + "/align",
     resources:
         mem_mb = 180000,
+        time = "72:00:00",
     shell:
         """
         mkdir -p {params.log_dir}

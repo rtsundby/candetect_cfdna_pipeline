@@ -72,9 +72,7 @@ for k,v in sorted(vars(args).items()):
 DATA_DIR = args.data_dir
 ARMZ_CSV = args.armz_csv
 
-# FEATURES = ["delfi","motifs","nmf"]
-# FEATURES = ["nmf"]
-FEATURES = ["delfi"]
+FEATURES = ["binwise"]
 
 ############################################################################
 # Plot coefficient heatmaps across each OVO comparison
@@ -95,7 +93,7 @@ for feature in FEATURES:
             f"{coeffs_dir}/{name}.csv", index_col=0)
 
         # label features
-        if feature == "delfi":
+        if feature == "binwise":
             pcs = ["pc" + str(i) for i in range(coeffs_df.shape[0] - len(arm_names))]
             coeffs_df.set_index(pd.Index(arm_names+pcs), inplace=True)
         elif feature == "motifs":

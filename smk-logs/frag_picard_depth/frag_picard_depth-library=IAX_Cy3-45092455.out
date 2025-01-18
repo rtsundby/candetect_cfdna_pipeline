@@ -1,0 +1,24 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 40
+Rules claiming more threads will be scaled down.
+Provided resources: mem_mb=180000, mem_mib=171662, disk_mb=1713, disk_mib=1634, cpus=40
+Select jobs to execute...
+
+[Wed Jan 15 02:57:41 2025]
+rule frag_picard_depth:
+    input: /data/ShernLiquidBx/candetect_test_train/bams/IAX_Cy3_filt.bam
+    output: /data/ShernLiquidBx/candetect_test_train/qc/IAX_Cy3_picard_depth.txt
+    log: /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/IAX_Cy3_frag_picard_depth.log
+    jobid: 0
+    benchmark: /data/ShernLiquidBx/candetect_test_train/benchmark/IAX_Cy3_frag_picard_depth.benchmark.txt
+    reason: Forced execution
+    wildcards: library=IAX_Cy3
+    resources: mem_mb=180000, mem_mib=171662, disk_mb=1713, disk_mib=1634, tmpdir=/tmp, time=48:00:00, cpus=40
+
+
+        /data/sundbyrt/repos/candetect_cfdna_pipeline/scripts/picard_depth.sh         /data/ShernLiquidBx/candetect_test_train/bams/IAX_Cy3_filt.bam         /data/ShernLiquidBx/ref/GCA_000001405.15_GRCh38_no_alt_analysis_set.fna         /data/ShernLiquidBx/candetect_test_train/qc/IAX_Cy3_picard_depth.txt         4 &> /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/IAX_Cy3_frag_picard_depth.log
+        
+[Wed Jan 15 03:01:15 2025]
+Finished job 0.
+1 of 1 steps (100%) done

@@ -1,0 +1,24 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 40
+Rules claiming more threads will be scaled down.
+Provided resources: mem_mb=180000, mem_mib=171662, disk_mb=16633, disk_mib=15863, cpus=40
+Select jobs to execute...
+
+[Thu Dec 19 12:59:58 2024]
+rule frag_picard_depth:
+    input: /data/ShernLiquidBx/candetect_test_train/bams/healthy4_filt.bam
+    output: /data/ShernLiquidBx/candetect_test_train/qc/healthy4_picard_depth.txt
+    log: /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/healthy4_frag_picard_depth.log
+    jobid: 0
+    benchmark: /data/ShernLiquidBx/candetect_test_train/benchmark/healthy4_frag_picard_depth.benchmark.txt
+    reason: Forced execution
+    wildcards: library=healthy4
+    resources: mem_mb=180000, mem_mib=171662, disk_mb=16633, disk_mib=15863, tmpdir=/tmp, time=48:00:00, cpus=40
+
+
+        /data/sundbyrt/repos/candetect_cfdna_pipeline/scripts/picard_depth.sh         /data/ShernLiquidBx/candetect_test_train/bams/healthy4_filt.bam         /data/ShernLiquidBx/ref/GCA_000001405.15_GRCh38_no_alt_analysis_set.fna         /data/ShernLiquidBx/candetect_test_train/qc/healthy4_picard_depth.txt         4 &> /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/healthy4_frag_picard_depth.log
+        
+[Thu Dec 19 13:48:51 2024]
+Finished job 0.
+1 of 1 steps (100%) done

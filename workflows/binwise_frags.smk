@@ -12,44 +12,43 @@ import os
 import itertools as it
 
 # Values directly from configuration file
-samples = config["samples"]
-COHORTS = config["cohorts"]
-threads = config["threads"]
-FRAG_DISTROS = config["frag_distro"]
-frag_threads = config["threads"]
-genome_fasta = config["genome_fasta"]
-frag_repo = config["frag_repo"]
-PE1 = config["PE1"]
-PE2 = config["PE2"]
-fasta_base = config["fasta_base"]
-lib_path = config["raw_fastq"]
-frag_container = config["frag_repo"]
-cfdna_wgs_container =  config["frag_repo"]
-normal_control = config.get("normal_control", "healthy")  # Default to "healthy" if not defined
+bwa_dir             = config["ref_dir"]
+COHORTS             = config["cohorts"]
+data_dir            = config["data_dir"]
+fasta_base          = config["fasta_base"]
+FRAG_DISTROS        = config["frag_distro"]
+frag_repo           = config["frag_repo"]
+frag_threads        = config["threads"]
+genome_fasta        = config["genome_fasta"]
+metadata_file       = config["metadata_file"]
+normal_control      = config.get("normal_control", "healthy")  # Default to "healthy" if not defined
+PE1                 = config.get("PE1", "need to define PE1")
+PE2                 = config.get("PE2", "need to define PE2")
+refdir              = config["ref_dir"]
+samples             = config["samples"]
+threads             = config["threads"]
 
 # Directory values derived from data_dir in configuration YAML
-data_dir             = config["data_dir"]
-frag                 = data_dir + "/analysis/cfdna_wgs/frag"
-frag_bams            = config["frag_bams"]
-frag_fastqs          = config["raw_fastq"]
-frag_frag            = data_dir + "/analysis/cfdna_wgs/frag/delfi"
-frag_frag_beds       = frag_frag  + "/beds"
-frag_frag_counts     = frag_frag + "/counts"
-frag_frag_gc_distros = frag_frag  + "/distros"
-qcdir                = data_dir + "/analysis/cfdna_wgs/qc"
-benchdir             = data_dir + "/benchmark"
-logdir               = data_dir + "/logs"
-refdir               = config["ref_dir"]
-bwa_dir              = config["ref_dir"]
-frag_scriptdir = config["frag_repo"] +  "/scripts"
-samplelist_dir    = config["data_dir"] + "/samplelist/features"
+benchdir            = data_dir + "/benchmark"
+frag                = data_dir + "/analysis/cfdna_wgs"
+frag_bams           = data_dir + "/bams"
+frag_fastqs         = data_dir + "/fastq"
+frag_scriptdir      = frag_repo +  "/scripts"
+logdir              = data_dir + "/logs/bin_wise_fragmentomics"
+qcdir               = data_dir + "/qc"
 
-# Read samples
+# Bin-wise fragmentomic specific directories
+bin_wise_frag            = frag + "/bin_wise_fragmentomics"
+
+bin_wise_beds      = bin_wise_frag + "/beds"
+bin_wise_counts     = bin_wise_frag + "/counts"
+bin_wise_gc_distros = bin_wise_frag + "/distros"
+
+####------ Read samples ------####
 frag_libs = pd.read_table(config["samples"])
 
 # Ensure readable fastqs
 readable = []
-#for x in lib_path + "/" + frag_libs["r1_basename"]:
 for x in frag_libs.file:
     readable.append(os.access(x, os.R_OK))
 frag_libs['readable']=readable
@@ -74,83 +73,83 @@ for c1, c2 in it.combinations(COHORTS,2):
 rule all:
   input: 
 #filt_bam_to_frag_bed
-    expand(frag_frag_beds + "/{library}_filt.bed",
+    expand(bin_wise_beds + "/{library}_filt.bed",
         library = frag_libs["library"],
     ),
 #gc_distro
-    expand(frag_frag_gc_distros + "/{library}_gc_distro.csv",
+    expand(bin_wise_gc_distros + "/{library}_gc_distro.csv",
         library = frag_libs["library"],
     ),
 #healthy_gc
-    frag_frag_gc_distros + "/healthy_med.rds",
+    bin_wise_gc_distros + "/healthy_med.rds",
 #frag_gc_sample
-    expand(frag_frag_beds + "/{library}_sampled_frag.bed",
+    expand(bin_wise_beds+ "/{library}_sampled_frag.bed",
         library = frag_libs["library"],
     ),
 #frag_sum
-    expand(frag_frag_beds + "/{library}_norm_short.bed",
+    expand(bin_wise_beds+ "/{library}_norm_short.bed",
         library = frag_libs["library"],
     ),
-    expand(frag_frag_beds + "/{library}_norm_long.bed",
+    expand(bin_wise_beds+ "/{library}_norm_long.bed",
         library = frag_libs["library"],
     ),
 #frag_window_count
-    expand(frag_frag_counts + "/{library}_cnt_short.tmp",
+    expand(bin_wise_counts + "/{library}_cnt_short.tmp",
         library = frag_libs["library"],
     ),
-    expand(frag_frag_counts + "/{library}_cnt_long.tmp",
+    expand(bin_wise_counts + "/{library}_cnt_long.tmp",
         library = frag_libs["library"],
     ),
 #frag_count_merge
-    frag_frag + "/frag_counts.tsv",
+    bin_wise_frag + "/frag_counts.tsv",
 #unit_cent_sd
-    frag_frag + "/ratios.tsv",
-# delfi armz (raw)
-    frag_frag + "/delfi_armz.raw.csv",
-# delfi_features
-    frag_frag + "/delfi_armz.clean.csv",
-    frag_frag + "/delfi_ratio.norm_rows.clean.csv",
-# delfi_model
-    expand(frag_frag + "/probs/{c1}_v_{c2}.csv", 
+    bin_wise_frag + "/ratios.tsv",
+# binwise armz (raw)
+    bin_wise_frag + "/binwise_armz.raw.csv",
+# binwise_features
+    bin_wise_frag + "/binwise_armz.clean.csv",
+    bin_wise_frag + "/binwise_ratio.norm_rows.clean.csv",
+# binwise_model
+    expand(bin_wise_frag + "/probs/{c1}_v_{c2}.csv", 
     zip,
         c1=COHORT_1,
         c2=COHORT_2
     ),
-    expand(frag_frag + "/coeffs/{c1}_v_{c2}.csv", 
+    expand(bin_wise_frag + "/coeffs/{c1}_v_{c2}.csv", 
     zip,
         c1=COHORT_1,
         c2=COHORT_2
     ),
 # aucs
-    frag_frag + "/aucs/aucs.csv",
-    expand(frag_frag + "/scores/{c1}_v_{c2}.csv",
+    bin_wise_frag + "/aucs/aucs.csv",
+    expand(bin_wise_frag + "/scores/{c1}_v_{c2}.csv",
     zip,
         c1 = COHORT_1,
         c2 = COHORT_2
     ),
 #prob plots
-    logdir + "/delfi/plot_probs.log",
+    logdir + "/plot_probs.log",
 # coefficient heatmaps
-    logdir + "/delfi/delfi_plot_coeff_heatmaps.log",
+    logdir + "/binwise_plot_coeff_heatmaps.log",
 
 rule filt_bam_to_frag_bed:
     benchmark: benchdir + "/{library}_filt_bam_to_frag_bed.benchmark.txt",
     input: frag_bams + "/{library}_filt.bam",
-    log: logdir + "/delfi/bam_to_bed/{library}_filt_bam_to_frag_bed.log",
-    output: frag_frag_beds + "/{library}_filt.bed",
+    log: logdir + "/bam_to_bed/{library}_filt_bam_to_frag_bed.log",
+    output: bin_wise_beds + "/{library}_filt.bed",
     params:
         fragdir = frag,
-        frag_fragdir = frag_frag,
-        out_dir = frag_frag_beds,
+        bin_wise_fragdir = bin_wise_frag,
+        out_dir = bin_wise_beds,
         fasta = genome_fasta,
         script = frag_scriptdir + "/filt_bam_to_frag_bed.sh",
         threads = frag_threads,
-        log_dir = logdir + "/delfi/bam_to_bed",
+        log_dir = logdir + "/bam_to_bed",
     shell:
         """
         mkdir -p {params.log_dir} 
         mkdir -p {params.fragdir} \
-        mkdir -p {params.frag_fragdir} \
+        mkdir -p {params.bin_wise_fragdir} \
         mkdir -p {params.out_dir} \
 
         {params.script} \
@@ -163,13 +162,13 @@ rule filt_bam_to_frag_bed:
 # Make GC distributions
 rule gc_distro:
     benchmark: benchdir + "/{library}_frag_gc_distro.benchmark.txt",
-    input: frag_frag_beds + "/{library}_filt.bed",
-    log: logdir + "/delfi/gc_distro/{library}_frag_gc_distro.log",
-    output: frag_frag_gc_distros + "/{library}_gc_distro.csv",
+    input: bin_wise_beds + "/{library}_filt.bed",
+    log: logdir + "/gc_distro/{library}_frag_gc_distro.log",
+    output: bin_wise_gc_distros + "/{library}_gc_distro.csv",
     params:
         script = frag_scriptdir + "/gc_distro.R",
-        out_dir = frag_frag_gc_distros,
-        log_dir = logdir + "/delfi/gc_distro",
+        out_dir = bin_wise_gc_distros,
+        log_dir = logdir + "/gc_distro",
     shell:
         """
         mkdir -p {params.log_dir} 
@@ -184,12 +183,12 @@ rule gc_distro:
 # Make healthy GC distributions summary file
 rule healthy_gc:
     benchmark: benchdir + "/frag_healthy_gc.benchmark.txt",
-    input: expand(frag_frag_gc_distros + "/{library}_gc_distro.csv", library = FRAG_HEALTHY_LIBRARIES),
-    log: logdir + "/delfi/healthy_gc/frag_healthy_gc.log",
-    output: frag_frag_gc_distros + "/healthy_med.rds",
+    input: expand(bin_wise_gc_distros + "/{library}_gc_distro.csv", library = FRAG_HEALTHY_LIBRARIES),
+    log: logdir + "/healthy_gc/frag_healthy_gc.log",
+    output: bin_wise_gc_distros + "/healthy_med.rds",
     params:
-        distro_dir = frag_frag_gc_distros,
-        log_dir = logdir + "/delfi/healthy_gc",
+        distro_dir = bin_wise_gc_distros,
+        log_dir = logdir + "/healthy_gc",
         script = frag_scriptdir + "/healthy_gc.R",
     shell:
         """
@@ -205,13 +204,13 @@ rule healthy_gc:
 rule frag_gc_sample:
     benchmark: benchdir + "/{library}_frag_gc_sample.benchmark.txt",
     input:
-        frag_bed = frag_frag_beds + "/{library}_filt.bed",
-        healthy_med = frag_frag_gc_distros + "/healthy_med.rds",
-    log: logdir + "/delfi/gc_sample/{library}_frag_gc_sample.log",
-    output: frag_frag_beds + "/{library}_sampled_frag.bed",
+        frag_bed = bin_wise_beds+ "/{library}_filt.bed",
+        healthy_med = bin_wise_gc_distros + "/healthy_med.rds",
+    log: logdir + "/gc_sample/{library}_frag_gc_sample.log",
+    output: bin_wise_beds+ "/{library}_sampled_frag.bed",
     params:
-        log_dir = logdir + "/delfi/gc_sample",
-        out_dir = frag_frag_beds,
+        log_dir = logdir + "/gc_sample",
+        out_dir = bin_wise_beds,
         script = frag_scriptdir + "/gc_sample.R",
     shell:
         """
@@ -227,13 +226,13 @@ rule frag_gc_sample:
 # Sum fragments in short and long length groups
 rule frag_sum:
     benchmark: benchdir + "/{library}_frag_sum.benchmark.txt",
-    input: frag_frag_beds + "/{library}_sampled_frag.bed",
-    log: logdir + "/delfi/frag_sum/{library}_frag_frag_window_sum.log",
+    input: bin_wise_beds+ "/{library}_sampled_frag.bed",
+    log: logdir + "/frag_sum/{library}_bin_wise_frag_window_sum.log",
     output:
-        short = frag_frag_beds + "/{library}_norm_short.bed",
-        long =  frag_frag_beds + "/{library}_norm_long.bed",
+        short = bin_wise_beds+ "/{library}_norm_short.bed",
+        long =  bin_wise_beds+ "/{library}_norm_long.bed",
     params:
-        log_dir = logdir + "/delfi/frag_sum",
+        log_dir = logdir + "/frag_sum",
         script = frag_scriptdir + "/frag_window_sum.sh",
         threads = frag_threads,
     shell:
@@ -246,20 +245,20 @@ rule frag_sum:
 
 # Count short and long fragments intersecting kept genomic windows
 rule frag_window_count:
-    benchmark: benchdir + "/{library}_frag_frag_window_int.benchmark.txt",
+    benchmark: benchdir + "/{library}_bin_wise_frag_window_int.benchmark.txt",
     input:
-        short = frag_frag_beds + "/{library}_norm_short.bed",
-        long = frag_frag_beds + "/{library}_norm_long.bed",
+        short = bin_wise_beds+ "/{library}_norm_short.bed",
+        long = bin_wise_beds+ "/{library}_norm_long.bed",
         matbed = refdir + "/keep_5mb.bed",
-    log: logdir + "/delfi/frag_window_count/{library}_frag_frag_window_int.log",
+    log: logdir + "/frag_window_count/{library}_bin_wise_frag_window_int.log",
     output:
-        short = frag_frag_counts + "/{library}_cnt_short.tmp",
-        long = frag_frag_counts + "/{library}_cnt_long.tmp",
+        short = bin_wise_counts + "/{library}_cnt_short.tmp",
+        long = bin_wise_counts + "/{library}_cnt_long.tmp",
     params:
         script = frag_scriptdir + "/frag_window_int.sh",
         threads = threads,
-        out_dir = frag_frag_counts,
-        log_dir = logdir + "/delfi/frag_window_count",
+        out_dir = bin_wise_counts,
+        log_dir = logdir + "/frag_window_count",
     shell:
         """
         mkdir -p {params.out_dir} 
@@ -277,14 +276,14 @@ rule frag_window_count:
 # Merge short and long fragment counts by genomic poistion for all libraries
 rule frag_count_merge:
     benchmark: benchdir + "/frag_count_merge.benchmark.txt",
-    input: expand(frag_frag_counts + "/{library}_cnt_{length}.tmp",  library = FRAG_LIBS, length = ["short","long"]),
-    log: logdir + "/delfi/frag_count_merge/frag_count_merge.log",
-    output:  frag_frag + "/frag_counts.tsv",
+    input: expand(bin_wise_counts + "/{library}_cnt_{length}.tmp",  library = FRAG_LIBS, length = ["short","long"]),
+    log: logdir + "/frag_count_merge/frag_count_merge.log",
+    output:  bin_wise_frag + "/frag_counts.tsv",
     params:
-        counts_dir = frag_frag + "/counts",
+        counts_dir = bin_wise_counts,
         script = frag_scriptdir + "/count_merge.sh",
         threads = frag_threads,
-        log_dir = logdir + "/delfi/frag_count_merge",
+        log_dir = logdir + "/frag_count_merge",
     shell:
         """
         mkdir -p {params.log_dir}
@@ -294,12 +293,12 @@ rule frag_count_merge:
         """
 rule unit_cent_sd:
     benchmark: benchdir + "/unit_cent_sd.benchmark.txt",
-    input: frag_frag + "/frag_counts.tsv",
-    log: logdir + "/delfi/unit_cent_sd/unit_cent_sd.log",
-    output: frag_frag + "/ratios.tsv",
+    input: bin_wise_frag + "/frag_counts.tsv",
+    log: logdir + "/unit_cent_sd/unit_cent_sd.log",
+    output: bin_wise_frag + "/ratios.tsv",
     params:
         script = frag_scriptdir + "/make_ratios.R",
-        log_dir = logdir + "/delfi/unit_cent_sd",
+        log_dir = logdir + "/unit_cent_sd",
     shell:
         """
         mkdir -p {params.log_dir}
@@ -307,19 +306,19 @@ rule unit_cent_sd:
         Rscript {params.script} \
         {input} {output} > {log} 2>&1
         """
-rule delfi_armz_raw:
+rule binwise_armz_raw:
     resources:
         time="0:60:00",
         mem_gb="4g",
     input:
-        frag_frag + "/frag_counts.tsv",
+        bin_wise_frag + "/frag_counts.tsv",
     output:
-        frag_frag + "/delfi_armz.raw.csv",
+        bin_wise_frag + "/binwise_armz.raw.csv",
     log:
-        logdir + "/delfi/armz_raw/delfi_armz_raw.log",
+        logdir + "/armz_raw/binwise_armz_raw.log",
     params:
-        log_dir = logdir + "/delfi/armz_raw",
-        script = frag_scriptdir + "/delfi_armz.R",
+        log_dir = logdir + "/armz_raw",
+        script = frag_scriptdir + "/binwise_armz.R",
         cytoband = config["cytoband"],
         sample_list = samples,
         control_term = normal_control,
@@ -336,21 +335,21 @@ rule delfi_armz_raw:
         {output} \
         &> {log}
         """
-rule delfi_features:
+rule binwise_features:
     resources:
         time="0:60:00",
     input:
-        arm_z = frag_frag +  "/delfi_armz.raw.csv",
-        ratio = frag_frag + "/ratios.tsv",
+        arm_z = bin_wise_frag +  "/binwise_armz.raw.csv",
+        ratio = bin_wise_frag + "/ratios.tsv",
     output:
-        arm_z = frag_frag + "/delfi_armz.clean.csv",
-        ratio = frag_frag + "/delfi_ratio.norm_rows.clean.csv",
+        arm_z = bin_wise_frag + "/binwise_armz.clean.csv",
+        ratio = bin_wise_frag + "/binwise_ratio.norm_rows.clean.csv",
     log:
-        logdir + "/delfi/features/delfi_features.log",
+        logdir + "/features/binwise_features.log",
     params:
-        script  = frag_scriptdir + "/delfi_features.py",
-        out_dir = frag_frag,
-        log_dir = logdir + "/delfi/features",
+        script  = frag_scriptdir + "/binwise_features.py",
+        out_dir = bin_wise_frag,
+        log_dir = logdir + "/features",
     shell:
         """
         mkdir -p {params.log_dir}
@@ -361,31 +360,31 @@ rule delfi_features:
         --out_dir {params.out_dir} \
         &> {log}
         """      
-rule delfi_model:
+rule binwise_model:
     resources:
         time="0:10:00",
         mem_gb="2g",
         cpus="8",
     input:
-       frag_frag + "/delfi_ratio.norm_rows.clean.csv",
+       bin_wise_frag + "/binwise_ratio.norm_rows.clean.csv",
     output:
-        probs = frag_frag + "/probs/{c1}_v_{c2}.csv",
-        coeffs = frag_frag + "/coeffs/{c1}_v_{c2}.csv",
+        probs = bin_wise_frag + "/probs/{c1}_v_{c2}.csv",
+        coeffs = bin_wise_frag + "/coeffs/{c1}_v_{c2}.csv",
     log:
-        logdir + "/delfi/model/delfi_model_{c1}_v_{c2}.log"
+        logdir + "/model/binwise_model_{c1}_v_{c2}.log"
     params:
-        arm_z = frag_frag + "/delfi_armz.clean.csv",
+        arm_z = bin_wise_frag + "/binwise_armz.clean.csv",
         sample_list = samples,
-        model = lambda wildcards: frag_frag + f"/model/{wildcards.c1}_v_{wildcards.c2}.pkl",
-        out_dir = frag_frag,
-        out_dirprob = frag_frag + "/probs",
-        out_dircoeffs = frag_frag + "/coeffs",
-        script = frag_scriptdir + "/delfi_model.py",
+        model = lambda wildcards: bin_wise_frag + f"/model/{wildcards.c1}_v_{wildcards.c2}.pkl",
+        out_dir = bin_wise_frag,
+        out_dirprob = bin_wise_frag + "/probs",
+        out_dircoeffs = bin_wise_frag + "/coeffs",
+        script = frag_scriptdir + "/binwise_model.py",
         c1 = lambda wildcards: wildcards.c1,
         c2 = lambda wildcards: wildcards.c2,
-        use_existing_model = lambda wildcards: frag_frag + f"/model/{wildcards.c1}_v_{wildcards.c2}.pkl" if os.path.exists(frag_frag + f"/model/{wildcards.c1}_v_{wildcards.c2}.pkl") else None,
+        use_existing_model = lambda wildcards: bin_wise_frag + f"/model/{wildcards.c1}_v_{wildcards.c2}.pkl" if os.path.exists(bin_wise_frag + f"/model/{wildcards.c1}_v_{wildcards.c2}.pkl") else None,
         name = "{c1}_v_{c2}",
-        log_dir = logdir + "/delfi/model",
+        log_dir = logdir + "/model",
     shell:
         """
         mkdir -p {params.out_dir} {params.out_dirprob} {params.out_dircoeffs} {params.log_dir}
@@ -416,32 +415,32 @@ rule delfi_model:
                 &> {log}
         fi
         """
-rule delfi_aucs:
+rule binwise_aucs:
     resources:
         time="0:05:00",
     input:
-        expand(frag_frag + "/probs/{c1}_v_{c2}.csv",
+        expand(bin_wise_frag + "/probs/{c1}_v_{c2}.csv",
         zip,
             c1 = COHORT_1,
             c2 = COHORT_2
         ),
         sample_list = samples,
     output:
-        frag_frag + "/aucs/aucs.csv",
-        expand(frag_frag + "/scores/{c1}_v_{c2}.csv",
+        bin_wise_frag + "/aucs/aucs.csv",
+        expand(bin_wise_frag + "/scores/{c1}_v_{c2}.csv",
                 zip,
                 c1 = COHORT_1,
                 c2 = COHORT_2
         ),
     log:
-        logdir + "/delfi/auc/delfi_aucs.log"
+        logdir + "/auc/binwise_aucs.log"
     params:
-        out_dir = frag_frag,
-        out_dir_auc = frag_frag + "/aucs",
-        out_dir_scores = frag_frag + "/scores",
+        out_dir = bin_wise_frag,
+        out_dir_auc = bin_wise_frag + "/aucs",
+        out_dir_scores = bin_wise_frag + "/scores",
         script = frag_scriptdir + "/aucs.py",
-        probs_dir = frag_frag + "/probs",
-        log_dir = logdir + "/delfi/auc",
+        probs_dir = bin_wise_frag + "/probs",
+        log_dir = logdir + "/auc",
     shell:
         """
         mkdir -p {params.out_dir_auc} {params.out_dir_scores} {params.log_dir} \
@@ -456,19 +455,19 @@ rule plot_probs:
     resources:
         time="0:20:00", 
     input:
-        expand(frag_frag + "/probs/{c1}_v_{c2}.csv",
+        expand(bin_wise_frag + "/probs/{c1}_v_{c2}.csv",
         zip,
             c1 = COHORT_1,
             c2 = COHORT_2
         ),
         sample_list = samples,
     log:
-        logdir + "/delfi/plot_probs/plot_probs.log"
+        logdir + "/plot_probs/plot_probs.log"
     params:
-        out_dir = frag_frag,
-        log_dir = logdir + "/delfi/plot_probs",
+        out_dir = bin_wise_frag,
+        log_dir = logdir + "/plot_probs",
         script  = frag_scriptdir + "/plot_probs.py",
-        probs_dir = frag_frag + "/probs",
+        probs_dir = bin_wise_frag + "/probs",
     shell:
         """
         mkdir -p {params.out_dir}
@@ -484,13 +483,13 @@ rule plot_coeff_heatmaps:
     resources:
         time="0:20:00",
     input:
-        arm_z = frag_frag + "/delfi_armz.clean.csv",
+        arm_z = bin_wise_frag + "/binwise_armz.clean.csv",
     log:
-        logdir + "/delfi/coeff_heatmaps/delfi_plot_coeff_heatmaps.log",
+        logdir + "/coeff_heatmaps/binwise_plot_coeff_heatmaps.log",
     params:
-        log_dir = logdir + "/delfi/coeff_heatmaps",
-        script  = frag_scriptdir + "/delfi_plot_coefficient_heatmaps.py",
-        data_dir = frag_frag,
+        log_dir = logdir + "/coeff_heatmaps",
+        script  = frag_scriptdir + "/binwise_plot_coefficient_heatmaps.py",
+        data_dir = bin_wise_frag,
     shell:
         """
         mkdir -p {params.log_dir}

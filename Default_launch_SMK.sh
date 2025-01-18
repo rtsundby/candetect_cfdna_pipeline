@@ -15,14 +15,14 @@ eval "$(command conda 'shell.bash' 'hook' 2> /dev/null)" # Necessary to run cond
 #Un-comment line-by-line to test each stage
 #snakemake -s workflows/frag_reads.smk --configfile config/default.yaml --profile profile/ -np
 #snakemake -s workflows/end_motifs.smk --configfile config/default.yaml --profile profile/ -np
-#snakemake -s workflows/DELFI.smk --configfile config/default.yaml --profile profile/ -np
+#snakemake -s workflows/binwise_frags.smk --configfile config/default.yaml --profile profile/ -np
 #snakemake -s workflows/NMF_size.smk --configfile config/default.yaml --profile profile/ -np
 
 #### Actual Run #### 
-#As this repo is currently set up, each line must be uncommented individually and run one-at-a-time (note: for end_motifs, DELFI and NMF_size you could add --nolock and run simultaneously)
+#As this repo is currently set up, each line must be uncommented individually and run one-at-a-time (note: for end_motifs, binwise_frags and NMF_size you could add --nolock and run simultaneously)
 snakemake -s workflows/frag_reads.smk --configfile config/default.yaml --profile profile/ 
 #snakemake -s workflows/end_motifs.smk --configfile config/default.yaml --profile profile/ 
-#snakemake -s workflows/DELFI.smk --configfile config/default.yaml --profile profile/ 
+#snakemake -s workflows/binwise_frags.smk --configfile config/default.yaml --profile profile/ 
 #snakemake -s workflows/NMF_size.smk --configfile config/default.yaml --profile profile/
 
 ## START SCRIPT:

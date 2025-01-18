@@ -1,0 +1,22 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 30
+Rules claiming more threads will be scaled down.
+Provided resources: mem_mb=120000, mem_mib=114441, disk_mb=44206, disk_mib=42159, cpus=30
+Select jobs to execute...
+
+[Sat Dec 21 09:40:46 2024]
+rule symlink_inputs:
+    input: /data/ShernLiquidBx/SARC031/fastq/cfDNA/18_KHU_Baseline_015_022_S18_R1_001.fastq.gz
+    output: /data/ShernLiquidBx/candetect_test_train/fastq/KHU_Cy0_raw_R1.fastq.gz, /data/ShernLiquidBx/candetect_test_train/fastq/KHU_Cy0_raw_R3.fastq.gz
+    jobid: 0
+    reason: Forced execution
+    wildcards: library=KHU_Cy0
+    resources: mem_mb=120000, mem_mib=114441, disk_mb=44206, disk_mib=42159, tmpdir=/tmp, time=48:00:00, cpus=30
+
+
+        /data/sundbyrt/repos/candetect_cfdna_pipeline/scripts/symlink.sh         /data/ShernLiquidBx/SARC031/fastq/cfDNA/18_KHU_Baseline_015_022_S18_R1_001.fastq.gz         /data/ShernLiquidBx/candetect_test_train/fastq/KHU_Cy0_raw_R1.fastq.gz         /data/ShernLiquidBx/candetect_test_train/fastq/KHU_Cy0_raw_R3.fastq.gz         /data/ShernLiquidBx/candetect_test_train/fastq
+        
+[Sat Dec 21 09:40:46 2024]
+Finished job 0.
+1 of 1 steps (100%) done

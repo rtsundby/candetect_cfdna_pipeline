@@ -1,0 +1,25 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 30
+Rules claiming more threads will be scaled down.
+Provided resources: mem_mb=120000, mem_mib=114441, disk_mb=7433, disk_mib=7089, cpus=30
+Select jobs to execute...
+
+[Sat Dec 21 09:41:58 2024]
+rule frag_fastqc:
+    input: /data/ShernLiquidBx/candetect_test_train/fastq/KHU_Cy0_raw_R3.fastq.gz
+    output: /data/ShernLiquidBx/candetect_test_train/qc/KHU_Cy0_raw_R3_fastqc.html, /data/ShernLiquidBx/candetect_test_train/qc/KHU_Cy0_raw_R3_fastqc.zip
+    log: /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/fastqc/KHU_Cy0_raw_R3_frag_fastqc.log
+    jobid: 0
+    benchmark: /data/ShernLiquidBx/candetect_test_train/benchmark/KHU_Cy0_raw_R3_frag_fastqc.benchmark.txt
+    reason: Forced execution
+    wildcards: library=KHU_Cy0, processing=raw, read=R3
+    resources: mem_mb=120000, mem_mib=114441, disk_mb=7433, disk_mib=7089, tmpdir=/tmp, time=48:00:00, cpus=30
+
+
+        mkdir -p /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/fastqc
+        /data/sundbyrt/repos/candetect_cfdna_pipeline/scripts/fastqc.sh         /data/ShernLiquidBx/candetect_test_train/fastq/KHU_Cy0_raw_R3.fastq.gz         /data/ShernLiquidBx/candetect_test_train/qc         4 &> /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/fastqc/KHU_Cy0_raw_R3_frag_fastqc.log
+        
+[Sat Dec 21 09:45:58 2024]
+Finished job 0.
+1 of 1 steps (100%) done

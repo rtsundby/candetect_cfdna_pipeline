@@ -37,17 +37,18 @@ main(){
 
 fastp_wrap(){
     fastp --detect_adapter_for_pe \
-          --failed_out $output_failed \
-          --in1 $input_read1 \
-          --in2 $input_read2 \
-          --html $log_html \
-          --json $log_json \
-          --out1 $output_read1 \
-          --out2 $output_read2 \
-          --unpaired1 $output_unpaired1 \
-          --unpaired2 $output_unpaired2 \
-          --thread $params_threads\
-          --temp_dir $tmp_dir 
+        --disable_length_filtering \
+        --failed_out $output_failed \
+        --in1 $input_read1 \
+        --in2 $input_read2 \
+        --html $log_html \
+        --json $log_json \
+        --out1 $output_read1 \
+        --out2 $output_read2 \
+        --unpaired1 $output_unpaired1 \
+        --unpaired2 $output_unpaired2 \
+        --thread $params_threads\
+        --temp_dir $tmp_dir 
     }
 
 # Run

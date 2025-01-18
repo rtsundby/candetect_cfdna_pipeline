@@ -10,8 +10,6 @@ fasta_base: ""       #e.g. "GCA_000001405.15_GRCh38_no_alt_analysis_set" DOES NO
 genome_fasta: ""        #e.g."/path/to/ref/GCA_000001405.15_GRCh38_no_alt_analysis_set.fna"
 ref_dir: ""        #e.g."/path/to/ref" This should be the directory containing the genome_fasta above
 threads: 4
-raw_fastq: ""        #e.g."/path/to/fastq/cfDNA" This is the path to the directory containing all of the raw fastq 
-frag_bams: ""        #e.g."/path/to/bams" This will be the output directory if starting from fastq
 gc5mb: ""        #e.g."/path/to/ref/gc5mb.bed"
 picardpath: "$PICARDJARPATH/picard.jar" #Path to picard
 

@@ -12,53 +12,49 @@ import os
 import itertools as it
 
 # Values directly from configuration file
-samples = config["samples"]
-COHORTS = config["cohorts"]
-threads = config["threads"]
-FRAG_DISTROS = config["frag_distro"]
-frag_threads = config["threads"]
-genome_fasta = config["genome_fasta"]
-frag_repo = config["frag_repo"]
-PE1 = config["PE1"]
-PE2 = config["PE2"]
-fasta_base = config["fasta_base"]
-lib_path = config["raw_fastq"]
-frag_container = config["frag_repo"]
-normal_control = config.get("normal_control", "healthy")  # Default to "healthy" if not defined
+bwa_dir             = config["ref_dir"]
+COHORTS             = config["cohorts"]
+data_dir            = config["data_dir"]
+fasta_base          = config["fasta_base"]
+FRAG_DISTROS        = config["frag_distro"]
+frag_repo           = config["frag_repo"]
+frag_threads        = config["threads"]
+genome_fasta        = config["genome_fasta"]
+metadata_file       = config["metadata_file"]
+normal_control      = config.get("normal_control", "healthy")  # Default to "healthy" if not defined
+PE1                 = config.get("PE1", "need to define PE1")
+PE2                 = config.get("PE2", "need to define PE2")
+refdir              = config["ref_dir"]
+samples             = config["samples"]
+threads             = config["threads"]
 
-# Directory values derived from data_dir in configuration YAML
-data_dir             = config["data_dir"]
-frag                 = data_dir + "/analysis/cfdna_wgs/frag"
-frag_bams            = config["frag_bams"]
-frag_fastqs          = config["raw_fastq"]
-frag_frag            = data_dir + "/analysis/cfdna_wgs/frag/delfi"
-frag_frag_beds       = frag_frag  + "/beds"
-frag_frag_counts     = frag_frag + "/counts"
-frag_frag_gc_distros = frag_frag  + "/distros"
-qcdir                = data_dir + "/analysis/cfdna_wgs/qc"
-benchdir             = data_dir + "/benchmark"
-logdir               = data_dir + "/logs"
-refdir               = config["ref_dir"]
-bwa_dir              = config["ref_dir"]
-frag_scriptdir       = config["frag_repo"] +  "/scripts"
-samplelist_dir       = config["data_dir"] + "/samplelist/features"
+# Directory values derived from configuration YAML
+benchdir            = data_dir + "/benchmark"
+frag                = data_dir + "/analysis/cfdna_wgs"
+frag_bams           = data_dir + "/bams"
+frag_fastqs         = data_dir + "/fastq"
+frag_scriptdir      = frag_repo +  "/scripts"
+logdir              = data_dir + "/logs/NMF_size"
+qcdir               = data_dir + "/qc"
 
-# NMF specific directories/inputs
-nmf_raw_hist_dir     = config["data_dir"] + "/analysis/cfdna_wgs/frag/nmf/raw"
-nmf_agg_hist_dir     = config["data_dir"] + "/analysis/cfdna_wgs/frag/nmf/agg"
-nmf_dir     = config["data_dir"] + "/analysis/cfdna_wgs/frag/nmf"
-nmf_probs = [f"{nmf_dir}/probs/{c1}_v_{c2}.n={{nc}}.csv" for (c1,c2) in it.combinations(COHORTS,2)]
-nmf_scores = [f"{nmf_dir}/scores/{c1}_v_{c2}.n={{nc}}.csv" for (c1,c2) in it.combinations(COHORTS,2)]
-nmf_comps = [f"{nmf_dir}/model/{c1}_v_{c2}.n={{nc}}.pkl" for (c1,c2) in it.combinations(COHORTS,2)]
-max_components = config["max_nmf_components"]
-nc = range(2,config["max_nmf_components"]+1)
+# NMF specific inputs
+max_components      = config["max_nmf_components"]
+nc                  = range(2,config["max_nmf_components"]+1)
 
-# Read samples
+# NMF specific directories
+nmf_dir             =  frag + "/nmf"
+
+nmf_agg_hist_dir    = nmf_dir + "/agg"
+nmf_comps           = [f"{nmf_dir}/model/{c1}_v_{c2}.n={{nc}}.pkl" for (c1,c2) in it.combinations(COHORTS,2)]
+nmf_probs           = [f"{nmf_dir}/probs/{c1}_v_{c2}.n={{nc}}.csv" for (c1,c2) in it.combinations(COHORTS,2)]
+nmf_raw_hist_dir    = nmf_dir + "/raw"
+nmf_scores          = [f"{nmf_dir}/scores/{c1}_v_{c2}.n={{nc}}.csv" for (c1,c2) in it.combinations(COHORTS,2)]
+
+####------ Read samples ------####
 frag_libs = pd.read_table(config["samples"])
 
 # Ensure readable fastqs
 readable = []
-#for x in lib_path + "/" + frag_libs["r1_basename"]:
 for x in frag_libs.file:
     readable.append(os.access(x, os.R_OK))
 frag_libs['readable']=readable

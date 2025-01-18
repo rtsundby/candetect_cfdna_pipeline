@@ -1,0 +1,43 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 30
+Rules claiming more threads will be scaled down.
+Provided resources: mem_mb=180000, mem_mib=171662, disk_mb=71391, disk_mib=68084, cpus=30
+Select jobs to execute...
+
+[Thu Dec 19 15:45:44 2024]
+rule frag_fastp:
+    input: /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_raw_R1.fastq.gz, /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_raw_R3.fastq.gz
+    output: /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_processed_R1.fastq.gz, /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_processed_R3.fastq.gz, /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_failed_fastp.fastq.gz, /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_unpaired_R1.fastq.gz, /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_unpaired_R3.fastq.gz
+    log: /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/fastp/JVT_Cy3_frag_fastp.log, /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/fastp/JVT_Cy3_frag_fastp.html, /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/fastp/JVT_Cy3_frag_fastp.json
+    jobid: 0
+    benchmark: /data/ShernLiquidBx/candetect_test_train/benchmark/JVT_Cy3_frag_fastp.benchmark.txt
+    reason: Forced execution
+    wildcards: library=JVT_Cy3
+    resources: mem_mb=180000, mem_mib=171662, disk_mb=71391, disk_mib=68084, tmpdir=/tmp, time=48:00:00, cpus=30
+
+
+        mkdir -p /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/fastp
+        module load fastp
+        fastp --detect_adapter_for_pe             --failed_out /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_failed_fastp.fastq.gz             --in1 /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_raw_R1.fastq.gz             --in2 /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_raw_R3.fastq.gz             --html /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/fastp/JVT_Cy3_frag_fastp.html             --json /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/fastp/JVT_Cy3_frag_fastp.json             --out1 /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_processed_R1.fastq.gz             --out2 /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_processed_R3.fastq.gz             --unpaired1 /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_unpaired_R1.fastq.gz             --unpaired2 /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_unpaired_R3.fastq.gz             --thread 4        > /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/fastp/JVT_Cy3_frag_fastp.log 2>&1
+        
+[+] Loading fastp  0.24.0 
+/usr/bin/bash: line 3: 1243257 Segmentation fault      (core dumped) fastp --detect_adapter_for_pe --failed_out /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_failed_fastp.fastq.gz --in1 /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_raw_R1.fastq.gz --in2 /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_raw_R3.fastq.gz --html /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/fastp/JVT_Cy3_frag_fastp.html --json /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/fastp/JVT_Cy3_frag_fastp.json --out1 /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_processed_R1.fastq.gz --out2 /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_processed_R3.fastq.gz --unpaired1 /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_unpaired_R1.fastq.gz --unpaired2 /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_unpaired_R3.fastq.gz --thread 4 > /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/fastp/JVT_Cy3_frag_fastp.log 2>&1
+[Thu Dec 19 16:05:15 2024]
+Error in rule frag_fastp:
+    jobid: 0
+    input: /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_raw_R1.fastq.gz, /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_raw_R3.fastq.gz
+    output: /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_processed_R1.fastq.gz, /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_processed_R3.fastq.gz, /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_failed_fastp.fastq.gz, /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_unpaired_R1.fastq.gz, /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_unpaired_R3.fastq.gz
+    log: /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/fastp/JVT_Cy3_frag_fastp.log, /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/fastp/JVT_Cy3_frag_fastp.html, /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/fastp/JVT_Cy3_frag_fastp.json (check log file(s) for error details)
+    shell:
+        
+        mkdir -p /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/fastp
+        module load fastp
+        fastp --detect_adapter_for_pe             --failed_out /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_failed_fastp.fastq.gz             --in1 /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_raw_R1.fastq.gz             --in2 /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_raw_R3.fastq.gz             --html /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/fastp/JVT_Cy3_frag_fastp.html             --json /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/fastp/JVT_Cy3_frag_fastp.json             --out1 /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_processed_R1.fastq.gz             --out2 /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_processed_R3.fastq.gz             --unpaired1 /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_unpaired_R1.fastq.gz             --unpaired2 /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_unpaired_R3.fastq.gz             --thread 4        > /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/fastp/JVT_Cy3_frag_fastp.log 2>&1
+        
+        (one of the commands exited with non-zero exit code; note that snakemake uses bash strict mode!)
+
+Removing output files of failed job frag_fastp since they might be corrupted:
+/data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_processed_R1.fastq.gz, /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_processed_R3.fastq.gz, /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_failed_fastp.fastq.gz, /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_unpaired_R1.fastq.gz, /data/ShernLiquidBx/candetect_test_train/fastq/JVT_Cy3_unpaired_R3.fastq.gz
+Shutting down, this might take some time.
+Exiting because a job execution failed. Look above for error message

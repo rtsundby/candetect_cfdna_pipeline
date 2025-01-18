@@ -1,0 +1,23 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 30
+Rules claiming more threads will be scaled down.
+Provided resources: mem_mb=120000, mem_mib=114441, disk_mb=19299, disk_mib=18405, cpus=30
+Select jobs to execute...
+
+[Tue Jan 14 10:45:07 2025]
+rule frag_alignment_qc:
+    input: /data/ShernLiquidBx/candetect_test_train/bams/healthy6_raw.bam
+    output: /data/ShernLiquidBx/candetect_test_train/qc/healthy6_raw_flagstat.txt, /data/ShernLiquidBx/candetect_test_train/qc/healthy6_raw_samstats.txt
+    log: /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/healthy6_raw_flagstat_frag_alignment_qc.log, /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/healthy6_raw_samstats_frag_alignment_qc.log
+    jobid: 0
+    reason: Forced execution
+    wildcards: library=healthy6, processing=raw
+    resources: mem_mb=120000, mem_mib=114441, disk_mb=19299, disk_mib=18405, tmpdir=/tmp, time=96:00:00, cpus=30
+
+
+        /data/sundbyrt/repos/candetect_cfdna_pipeline/scripts/alignment_qc.sh         /data/ShernLiquidBx/candetect_test_train/bams/healthy6_raw.bam         /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/healthy6_raw_flagstat_frag_alignment_qc.log         /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/healthy6_raw_samstats_frag_alignment_qc.log         /data/ShernLiquidBx/candetect_test_train/qc/healthy6_raw_flagstat.txt         /data/ShernLiquidBx/candetect_test_train/qc/healthy6_raw_samstats.txt         4 &> /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/healthy6_raw_flagstat_frag_alignment_qc.log /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/healthy6_raw_samstats_frag_alignment_qc.log
+        
+[Tue Jan 14 10:54:41 2025]
+Finished job 0.
+1 of 1 steps (100%) done

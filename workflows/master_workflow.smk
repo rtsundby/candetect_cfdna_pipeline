@@ -2,7 +2,7 @@
 #                                                                              #
 #     Master workflor for pre-processing and analysis of cfDNA WGS:            #
 # Will run pre-processing first (frag_reads.smk) first. If completed w/o error #
-#           Will then run end_motifs, DELFI, NMF_size in parallel              #
+#           Will then run end_motifs, binwise, NMF_size in parallel              #
 #                                                                              #
 #########1#########2#########3#########4#########5#########6#########7#########8
 
@@ -10,7 +10,7 @@ rule all:
     input:
         "frag_reads.done",
         "end_motifs.done",
-        "DELFI.done",
+        "binwise.done",
         "NMF_size.done"
 
 # Rule to run frag_reads.smk
@@ -37,16 +37,16 @@ rule run_end_motifs:
         snakemake -s end_motifs.smk --nolock --configfile {params.configfile} --profile profile/ && touch {output}
         """
 
-rule run_DELFI:
+rule run_binwise:
     input:
         "frag_reads.done"
     output:
-        "DELFI.done"
+        "binwise.done"
     params:
         configfile="{configfile}"  
     shell:
         """
-        snakemake -s DELFI.smk --nolock --configfile {params.configfile} --profile profile/ && touch {output}
+        snakemake -s binwise_frags.smk --nolock --configfile {params.configfile} --profile profile/ && touch {output}
         """
 
 rule run_NMF_size:

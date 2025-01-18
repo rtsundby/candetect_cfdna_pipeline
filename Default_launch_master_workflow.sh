@@ -14,8 +14,8 @@ eval "$(command conda 'shell.bash' 'hook' 2> /dev/null)" # Necessary to run cond
 cd $SMK_DIR
 
 #### Run the Snakemake master workflow with the specified configuration ####
-#snakemake -s master_workflow.smk --configfile $CONFIG_FILE --profile profile/ -np #Dry run
-snakemake -s master_workflow.smk --configfile $CONFIG_FILE --profile profile/   #Actual run
+#snakemake -s workflows/master_workflow.smk --configfile $CONFIG_FILE --profile profile/ -np #Dry run
+snakemake -s workflows/master_workflow.smk --configfile $CONFIG_FILE --profile profile/   #Actual run
 
 ## START SCRIPT: Copy and paste the below line (without the '#'), updated with paths, to terminal on the HPC to launch the smk pipeline
 # sbatch --mem=1g --cpus-per-task=2 --time=120:00:00 --mail-type=BEGIN,TIME_LIMIT_90,END /path/to/repos/candetect_cfdna_pipeline/Default_launch_master_workflow.sh 
