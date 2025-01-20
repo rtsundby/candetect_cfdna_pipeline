@@ -4,6 +4,8 @@
 **/.cache
 **/.config
 **/.java
+smk-logs
+**/.out
 inputs/test_train.tsv
 inputs/test_validate.tsv
 config/test_train.yaml
