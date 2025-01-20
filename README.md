@@ -8,6 +8,7 @@ This repository hosts a snakemake workflow for basic processing and fragmentomic
 
 # Use
 -   See the example configuration yaml `config/default.yaml` and wrapper workflow `inputs/library_list_format.tsv` for necessary run conditions.
+-   Workflow can be run individually (Default_launch_SMK.sh) or as an integrated workflow (Default_launch_master_workflow.sh) which will run pre-processing first and then, if completed without errors, all downstream analsysis (end motifs, cfDNA size NMF, bin-wise fragmentomics) workflows in parallel.  If running individually, frag_reads.smk (pre-processing) MUST be run first.
 -   In its current itteration, software is loaded from the host HPC is there is not a saved image. Snakemakes and configs can be changed to use a docker container (see `docker` and <https://hub.docker.com/repository/docker/jeszyman/cfdna_wgs/general> for software versions used in publicatons above)
 -   Several reference files are required and must be downloaded seperately:
         * Reference genome e.g. GCA_000001405.15_GRCh38_no_alt_analysis_set.fna
