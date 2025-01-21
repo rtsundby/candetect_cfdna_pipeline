@@ -128,9 +128,9 @@ rule all:
         c2 = COHORT_2
     ),
 #prob plots
-    logdir + "/plot_probs.log",
+    logdir + "/plot_probs/plot_probs.log",
 # coefficient heatmaps
-    logdir + "/binwise_plot_coeff_heatmaps.log",
+    logdir + "/coeff_heatmaps/binwise_plot_coeff_heatmaps.log",
 
 rule filt_bam_to_frag_bed:
     benchmark: benchdir + "/{library}_filt_bam_to_frag_bed.benchmark.txt",
