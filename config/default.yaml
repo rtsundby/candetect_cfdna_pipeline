@@ -13,6 +13,11 @@ threads: 4
 gc5mb: ""        #e.g."/path/to/ref/gc5mb.bed"
 picardpath: "$PICARDJARPATH/picard.jar" #Path to picard
 
+# Sequencing parameters
+seq_params:
+  read_type: "PE"  # PE for paired-end, SE for single-end
+  read_length: 150 # Length of each read
+
 ### Define what paired end reads using for alignment ###
 PE1: "R1" #extension for paired end 1. Default "R1"
 PE2: "R2" #extension for paired end 2. Default "R2"

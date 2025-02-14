@@ -1,18 +1,23 @@
 #!/usr/bin/env bash
-in_bam_string=$1
+set -o errexit   # abort on nonzero exitstatus
+set -o nounset   # abort on unbound variable
+set -o pipefail  # don't hide errors within pipes
+
+# Script variables
+input_bam=$1
 blacklist=$2
 threads=$3
-out_raw=$4
-out_plot=$5
+output_tsv=$4
+output_pdf=$5
 
-module load deeptools 
+module load deeptools
 
+# Run plotCoverage for single BAM file
 plotCoverage \
-    --bamfiles $in_bam_string \
-    --blackListFileName $blacklist \
-    --extendReads \
-    --numberOfProcessors $threads \
-    --outRawCounts $out_raw \
-    --plotFile $out_plot \
-    --plotFileFormat pdf \
-    --skipZeros
+    --bamfiles "$input_bam" \
+    --numberOfProcessors "$threads" \
+    --blackListFileName "$blacklist" \
+    --plotFile "$output_pdf" \
+    --outRawCounts "$output_tsv" \
+    --skipZeros \
+    --centerReads

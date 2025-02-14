@@ -148,9 +148,9 @@ rule filt_bam_to_frag_bed:
     shell:
         """
         mkdir -p {params.log_dir} 
-        mkdir -p {params.fragdir} \
-        mkdir -p {params.bin_wise_fragdir} \
-        mkdir -p {params.out_dir} \
+        mkdir -p {params.fragdir} 
+        mkdir -p {params.bin_wise_fragdir} 
+        mkdir -p {params.out_dir} 
 
         {params.script} \
         {input} \
@@ -171,13 +171,13 @@ rule gc_distro:
         log_dir = logdir + "/gc_distro",
     shell:
         """
-        mkdir -p {params.log_dir} 
-        mkdir -p {params.out_dir} \
+        mkdir -p {params.log_dir}
+        mkdir -p {params.out_dir}
+
         module load R
         Rscript {params.script} \
         {input} \
-        {output} \
-        > {log} 2>&1
+        {output} > {log} 2>&1
         """
 
 # Make healthy GC distributions summary file
@@ -193,7 +193,7 @@ rule healthy_gc:
     shell:
         """
         mkdir -p {params.log_dir} 
-        module load R
+        module load R && \
         Rscript {params.script} \
         {params.distro_dir} \
         "{input}" \
@@ -215,7 +215,7 @@ rule frag_gc_sample:
     shell:
         """
         mkdir -p {params.log_dir} 
-        mkdir -p {params.out_dir} \
+        mkdir -p {params.out_dir} 
 
         module load R
         Rscript {params.script} \
@@ -275,21 +275,28 @@ rule frag_window_count:
 
 # Merge short and long fragment counts by genomic poistion for all libraries
 rule frag_count_merge:
-    benchmark: benchdir + "/frag_count_merge.benchmark.txt",
-    input: expand(bin_wise_counts + "/{library}_cnt_{length}.tmp",  library = FRAG_LIBS, length = ["short","long"]),
-    log: logdir + "/frag_count_merge/frag_count_merge.log",
-    output:  bin_wise_frag + "/frag_counts.tsv",
+    benchmark:
+        benchdir + "/frag_count_merge.benchmark.txt",
+    input:
+        expand(bin_wise_counts + "/{library}_cnt_{length}.tmp",
+            library = FRAG_LIBS,
+            length = ["short","long"],
+        ),
+    log:
+        logdir + "/frag_count_merge/frag_count_merge.log",
+    output:
+        bin_wise_frag + "/frag_counts.tsv",
     params:
         counts_dir = bin_wise_counts,
         script = frag_scriptdir + "/count_merge.sh",
-        threads = frag_threads,
         log_dir = logdir + "/frag_count_merge",
     shell:
         """
         mkdir -p {params.log_dir}
         {params.script} \
         {params.counts_dir} \
-        {output} &> {log}
+        {output} \
+        &> {log}
         """
 rule unit_cent_sd:
     benchmark: benchdir + "/unit_cent_sd.benchmark.txt",
@@ -375,49 +382,46 @@ rule binwise_model:
     params:
         arm_z = bin_wise_frag + "/binwise_armz.clean.csv",
         sample_list = samples,
-        model = lambda wildcards: bin_wise_frag + f"/model/{wildcards.c1}_v_{wildcards.c2}.pkl",
-        out_dir = bin_wise_frag,
-        out_dirprob = bin_wise_frag + "/probs",
-        out_dircoeffs = bin_wise_frag + "/coeffs",
+        model = lambda wildcards: config["existing_delfi_model"] if config["existing_delfi_model"] != "no" else None,
+        out_dir = bin_wise_frag + "/model",
+        out_dirprob = bin_wise_frag + "/model/prob",
+        out_dircoeffs = bin_wise_frag + "/model/coeffs",
         script = frag_scriptdir + "/binwise_model.py",
         c1 = lambda wildcards: wildcards.c1,
         c2 = lambda wildcards: wildcards.c2,
-        use_existing_model = lambda wildcards: bin_wise_frag + f"/model/{wildcards.c1}_v_{wildcards.c2}.pkl" if os.path.exists(bin_wise_frag + f"/model/{wildcards.c1}_v_{wildcards.c2}.pkl") else None,
         name = "{c1}_v_{c2}",
         log_dir = logdir + "/model",
     shell:
         """
         mkdir -p {params.out_dir} {params.out_dirprob} {params.out_dircoeffs} {params.log_dir}
 
-        # Use conditional for existing model
-        if [ -f {params.model} ]; then
-            echo "Using existing model: {params.model}"
+        if [ "{params.model}" != "None" ]; then
+            echo "Using existing model from config: {params.model}"
             python3 {params.script} \
-                --armz_csv {params.arm_z} \
-                --ratio_csv {input} \
-                --samplelist {params.sample_list} \
-                --cohort1 {params.c1} \
-                --cohort2 {params.c2} \
-                --out_dir {params.out_dir} \
-                --name {params.name} \
-                --existing_model {params.model} \
-                &> {log}
+            --data_dir {params.data_dir} \
+            --armz_csv {input.arm_z} \
+            --model_dir {params.model} \
+            --name {params.name} \
+            --out_dir {params.out_dir} \
+            --out_dirprob {params.out_dirprob} \
+            --out_dircoeffs {params.out_dircoeffs} \
+            --existing_model \
+            &> {log}
         else
-            echo "Model does not exist, creating new model"
+            echo "Training new model"
             python3 {params.script} \
-                --armz_csv {params.arm_z} \
-                --ratio_csv {input} \
-                --samplelist {params.sample_list} \
-                --cohort1 {params.c1} \
-                --cohort2 {params.c2} \
-                --out_dir {params.out_dir} \
-                --name {params.name} \
-                &> {log}
+            --data_dir {params.data_dir} \
+            --armz_csv {input.arm_z} \
+            --name {params.name} \
+            --out_dir {params.out_dir} \
+            --out_dirprob {params.out_dirprob} \
+            --out_dircoeffs {params.out_dircoeffs} \
+            &> {log}
         fi
         """
 rule binwise_aucs:
     resources:
-        time="0:05:00",
+        time="2:00:00",
     input:
         expand(bin_wise_frag + "/probs/{c1}_v_{c2}.csv",
         zip,

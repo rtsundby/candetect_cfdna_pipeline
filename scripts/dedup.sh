@@ -10,8 +10,26 @@ threads="${3}"
 
 module load samtools
 
-samtools sort -@ $threads -n -o - $raw_bam |
-    samtools fixmate -m - - |
-    samtools sort -@ $threads -o - - |
-    samtools markdup -@ $threads -r - $dedup_bam
-samtools index $dedup_bam
+# Create temporary directory
+tmp_dir=$(mktemp -d -p $(dirname "$dedup_bam"))
+trap 'rm -rf "$tmp_dir"' EXIT
+
+# Step 1: Sort by name
+echo "Sorting by name..."
+samtools sort -@ "$threads" -n -o "$tmp_dir/namesort.bam" "$raw_bam"
+
+# Step 2: Fix mates
+echo "Running fixmate..."
+samtools fixmate -m "$tmp_dir/namesort.bam" "$tmp_dir/fixmate.bam"
+
+# Step 3: Sort by position
+echo "Sorting by position..."
+samtools sort -@ "$threads" -o "$tmp_dir/positionsort.bam" "$tmp_dir/fixmate.bam"
+
+# Step 4: Mark and remove duplicates
+echo "Marking and removing duplicates..."
+samtools markdup -@ "$threads" -r "$tmp_dir/positionsort.bam" "$dedup_bam"
+
+# Step 5: Index the final BAM
+echo "Indexing final BAM..."
+samtools index "$dedup_bam"

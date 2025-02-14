@@ -22,7 +22,7 @@ eval "$(command conda 'shell.bash' 'hook' 2> /dev/null)" # Necessary to run cond
 #As this repo is currently set up, each line must be uncommented individually and run one-at-a-time (note: for end_motifs, binwise_frags and NMF_size you could add --nolock and run simultaneously)
 snakemake -s workflows/frag_reads.smk --configfile config/test_train.yaml --profile profile/ 
 #snakemake -s workflows/end_motifs.smk --configfile config/test_train.yaml --profile profile/ 
-#snakemake -s workflows/binwise_frags.smk --configfile config/test_train.yaml --profile profile/ 
+snakemake -s workflows/binwise_frags.smk --configfile config/test_train.yaml --profile profile/ 
 #snakemake -s workflows/NMF_size.smk --configfile config/test_train.yaml --profile profile/
 
 ## START SCRIPT: Copy and paste this line, updated with paths, to terminal on the HPC to launch the smk pipeline

@@ -13,7 +13,7 @@ default-resources:
   - cpus=30
 
 # snakemake options
-latency-wait: 30
+latency-wait: 120
 keep-going: True
 jobs: 100
 max-jobs-per-second: 0.5

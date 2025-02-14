@@ -1,0 +1,230 @@
+[-] Unloading snakemake  7.32.4 
+[+] Loading snakemake  7.32.4 
+Using profile profile/ for setting default command line arguments.
+Building DAG of jobs...
+Updating job frag_alignment_qc.
+Replace frag_alignment_qc with dynamic branch frag_alignment_qc
+updating depending job frag_multiqc
+updating depending job all
+Updating job frag_picard_depth.
+Replace frag_picard_depth with dynamic branch frag_picard_depth
+updating depending job frag_multiqc
+updating depending job all
+Updating job frag_bampefragsize.
+Replace frag_bampefragsize with dynamic branch frag_bampefragsize
+updating depending job frag_multiqc
+updating depending job frag_make_qc_tsv
+updating depending job all
+Updating job frag_bamcoverage.
+Replace frag_bamcoverage with dynamic branch frag_bamcoverage
+updating depending job all
+Updating job frag_plotcoverage.
+Replace frag_plotcoverage with dynamic branch frag_plotcoverage
+updating depending job frag_multiqc
+updating depending job frag_make_qc_tsv
+updating depending job all
+Updating job all.
+Replace all with dynamic branch all
+Updating job frag_alignment_qc.
+Replace frag_alignment_qc with dynamic branch frag_alignment_qc
+updating depending job frag_multiqc
+updating depending job all
+Updating job frag_picard_depth.
+Replace frag_picard_depth with dynamic branch frag_picard_depth
+updating depending job frag_multiqc
+updating depending job all
+Updating job frag_bamcoverage.
+Replace frag_bamcoverage with dynamic branch frag_bamcoverage
+updating depending job all
+Updating job frag_bampefragsize.
+Replace frag_bampefragsize with dynamic branch frag_bampefragsize
+updating depending job frag_multiqc
+updating depending job frag_make_qc_tsv
+updating depending job all
+Updating job frag_plotcoverage.
+Replace frag_plotcoverage with dynamic branch frag_plotcoverage
+updating depending job frag_multiqc
+updating depending job frag_make_qc_tsv
+updating depending job all
+Updating job all.
+Replace all with dynamic branch all
+Using shell: /usr/bin/bash
+Provided cluster nodes: 100
+Job stats:
+job                      count
+---------------------  -------
+all                          1
+frag_alignment_qc            2
+frag_bamcoverage             4
+frag_bampefragsize           1
+frag_dedup                   2
+frag_filter_alignment        2
+frag_make_qc_tsv             1
+frag_multiqc                 1
+frag_picard_depth            2
+frag_plotcoverage            1
+total                       17
+
+Resources before job selection: {'_cores': 9223372036854775807, '_nodes': 100}
+Ready jobs (4)
+Select jobs to execute...
+Selected jobs (4)
+Resources after job selection: {'_cores': 9223372036854775803, '_nodes': 96}
+
+[Mon Jan 20 22:03:03 2025]
+rule frag_dedup:
+    input: /data/ShernLiquidBx/candetect_test_train/bams/healthy6_raw.bam
+    output: /data/ShernLiquidBx/candetect_test_train/bams/healthy6_dedup.bam
+    log: /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/dedup/healthy6_frag_dedup.log
+    jobid: 17
+    benchmark: /data/ShernLiquidBx/candetect_test_train/benchmark/healthy6_frag_dedup.benchmark.txt
+    reason: Missing output files: /data/ShernLiquidBx/candetect_test_train/bams/healthy6_dedup.bam; Updated input files: /data/ShernLiquidBx/candetect_test_train/bams/healthy6_raw.bam
+    wildcards: library=healthy6
+    resources: mem_mb=120000, mem_mib=114441, disk_mb=19299, disk_mib=18405, tmpdir=<TBD>, time=48:00:00, cpus=30
+
+
+        mkdir -p /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/dedup
+        /data/sundbyrt/repos/candetect_cfdna_pipeline/scripts/dedup.sh         /data/ShernLiquidBx/candetect_test_train/bams/healthy6_raw.bam         /data/ShernLiquidBx/candetect_test_train/bams/healthy6_dedup.bam         4 &> /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/dedup/healthy6_frag_dedup.log
+        
+Jobscript:
+#!/bin/sh
+# properties = {"type": "single", "rule": "frag_dedup", "local": false, "input": ["/data/ShernLiquidBx/candetect_test_train/bams/healthy6_raw.bam"], "output": ["/data/ShernLiquidBx/candetect_test_train/bams/healthy6_dedup.bam"], "wildcards": {"library": "healthy6"}, "params": {"script": "/data/sundbyrt/repos/candetect_cfdna_pipeline/scripts/dedup.sh", "threads": 4, "log_dir": "/data/ShernLiquidBx/candetect_test_train/logs/preprocessing/dedup"}, "log": ["/data/ShernLiquidBx/candetect_test_train/logs/preprocessing/dedup/healthy6_frag_dedup.log"], "threads": 1, "resources": {"mem_mb": 120000, "mem_mib": 114441, "disk_mb": 19299, "disk_mib": 18405, "tmpdir": "<TBD>", "time": "48:00:00", "cpus": 30}, "jobid": 17, "cluster": {}}
+cd /vf/users/sundbyrt/repos/candetect_cfdna_pipeline && /usr/local/apps/snakemake/conda/envs/7.32.4/bin/python3.11 -m snakemake --snakefile '/vf/users/sundbyrt/repos/candetect_cfdna_pipeline/workflows/frag_reads.smk' --target-jobs 'frag_dedup:library=healthy6' --allowed-rules 'frag_dedup' --cores 'all' --attempt 1 --force-use-threads  --resources 'mem_mb=120000' 'mem_mib=114441' 'disk_mb=19299' 'disk_mib=18405' 'cpus=30' --wait-for-files '/vf/users/sundbyrt/repos/candetect_cfdna_pipeline/.snakemake/tmp.bfhelw5p' '/data/ShernLiquidBx/candetect_test_train/bams/healthy6_raw.bam' --force --keep-target-files --keep-remote --max-inventory-time 0 --nocolor --notemp --no-hooks --nolock --ignore-incomplete --rerun-triggers 'params' 'input' 'mtime' 'code' 'software-env' --skip-script-cleanup  --conda-frontend 'mamba' --wrapper-prefix 'https://github.com/snakemake/snakemake-wrappers/raw/' --configfiles '/vf/users/sundbyrt/repos/candetect_cfdna_pipeline/config/test_train.yaml' --printshellcmds  --latency-wait 30 --scheduler 'greedy' --scheduler-solver-path '/usr/local/apps/snakemake/conda/envs/7.32.4/bin' --default-resources 'mem_mb=120000' 'disk_mb=max(2*input.size_mb, 1000)' 'tmpdir=system_tmpdir' 'time="48:00:00"' 'cpus=30' --mode 2 && touch '/vf/users/sundbyrt/repos/candetect_cfdna_pipeline/.snakemake/tmp.bfhelw5p/17.jobfinished' || (touch '/vf/users/sundbyrt/repos/candetect_cfdna_pipeline/.snakemake/tmp.bfhelw5p/17.jobfailed'; exit 1)
+
+Submitted job 17 with external jobid '45533739'.
+
+[Mon Jan 20 22:03:06 2025]
+rule frag_dedup:
+    input: /data/ShernLiquidBx/candetect_test_train/bams/healthy5_raw.bam
+    output: /data/ShernLiquidBx/candetect_test_train/bams/healthy5_dedup.bam
+    log: /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/dedup/healthy5_frag_dedup.log
+    jobid: 16
+    benchmark: /data/ShernLiquidBx/candetect_test_train/benchmark/healthy5_frag_dedup.benchmark.txt
+    reason: Missing output files: /data/ShernLiquidBx/candetect_test_train/bams/healthy5_dedup.bam; Updated input files: /data/ShernLiquidBx/candetect_test_train/bams/healthy5_raw.bam
+    wildcards: library=healthy5
+    resources: mem_mb=120000, mem_mib=114441, disk_mb=15706, disk_mib=14979, tmpdir=<TBD>, time=48:00:00, cpus=30
+
+
+        mkdir -p /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/dedup
+        /data/sundbyrt/repos/candetect_cfdna_pipeline/scripts/dedup.sh         /data/ShernLiquidBx/candetect_test_train/bams/healthy5_raw.bam         /data/ShernLiquidBx/candetect_test_train/bams/healthy5_dedup.bam         4 &> /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/dedup/healthy5_frag_dedup.log
+        
+Jobscript:
+#!/bin/sh
+# properties = {"type": "single", "rule": "frag_dedup", "local": false, "input": ["/data/ShernLiquidBx/candetect_test_train/bams/healthy5_raw.bam"], "output": ["/data/ShernLiquidBx/candetect_test_train/bams/healthy5_dedup.bam"], "wildcards": {"library": "healthy5"}, "params": {"script": "/data/sundbyrt/repos/candetect_cfdna_pipeline/scripts/dedup.sh", "threads": 4, "log_dir": "/data/ShernLiquidBx/candetect_test_train/logs/preprocessing/dedup"}, "log": ["/data/ShernLiquidBx/candetect_test_train/logs/preprocessing/dedup/healthy5_frag_dedup.log"], "threads": 1, "resources": {"mem_mb": 120000, "mem_mib": 114441, "disk_mb": 15706, "disk_mib": 14979, "tmpdir": "<TBD>", "time": "48:00:00", "cpus": 30}, "jobid": 16, "cluster": {}}
+cd /vf/users/sundbyrt/repos/candetect_cfdna_pipeline && /usr/local/apps/snakemake/conda/envs/7.32.4/bin/python3.11 -m snakemake --snakefile '/vf/users/sundbyrt/repos/candetect_cfdna_pipeline/workflows/frag_reads.smk' --target-jobs 'frag_dedup:library=healthy5' --allowed-rules 'frag_dedup' --cores 'all' --attempt 1 --force-use-threads  --resources 'mem_mb=120000' 'mem_mib=114441' 'disk_mb=15706' 'disk_mib=14979' 'cpus=30' --wait-for-files '/vf/users/sundbyrt/repos/candetect_cfdna_pipeline/.snakemake/tmp.bfhelw5p' '/data/ShernLiquidBx/candetect_test_train/bams/healthy5_raw.bam' --force --keep-target-files --keep-remote --max-inventory-time 0 --nocolor --notemp --no-hooks --nolock --ignore-incomplete --rerun-triggers 'params' 'input' 'mtime' 'code' 'software-env' --skip-script-cleanup  --conda-frontend 'mamba' --wrapper-prefix 'https://github.com/snakemake/snakemake-wrappers/raw/' --configfiles '/vf/users/sundbyrt/repos/candetect_cfdna_pipeline/config/test_train.yaml' --printshellcmds  --latency-wait 30 --scheduler 'greedy' --scheduler-solver-path '/usr/local/apps/snakemake/conda/envs/7.32.4/bin' --default-resources 'mem_mb=120000' 'disk_mb=max(2*input.size_mb, 1000)' 'tmpdir=system_tmpdir' 'time="48:00:00"' 'cpus=30' --mode 2 && touch '/vf/users/sundbyrt/repos/candetect_cfdna_pipeline/.snakemake/tmp.bfhelw5p/16.jobfinished' || (touch '/vf/users/sundbyrt/repos/candetect_cfdna_pipeline/.snakemake/tmp.bfhelw5p/16.jobfailed'; exit 1)
+
+Submitted job 16 with external jobid '45533742'.
+
+[Mon Jan 20 22:03:08 2025]
+rule frag_bamcoverage:
+    input: /data/ShernLiquidBx/candetect_test_train/bams/KAT_Cy5_filt.bam
+    output: /data/ShernLiquidBx/candetect_test_train/qc/KAT_Cy5_bamcoverage.bg
+    log: /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/KAT_Cy5_frag_bamcoverage.log
+    jobid: 59
+    benchmark: /data/ShernLiquidBx/candetect_test_train/benchmark/KAT_Cy5_frag_bamcoverage.benchmark.txt
+    reason: Missing output files: /data/ShernLiquidBx/candetect_test_train/qc/KAT_Cy5_bamcoverage.bg
+    wildcards: library=KAT_Cy5
+    resources: mem_mb=120000, mem_mib=114441, disk_mb=22973, disk_mib=21909, tmpdir=<TBD>, time=48:00:00, cpus=30
+
+
+        /data/sundbyrt/repos/candetect_cfdna_pipeline/scripts/bamcoverage.sh         /data/ShernLiquidBx/candetect_test_train/bams/KAT_Cy5_filt.bam         /data/ShernLiquidBx/candetect_test_train/qc/KAT_Cy5_bamcoverage.bg         10000         /data/sundbyrt/reference/GRCh38/hg38-blacklist.v2.bed         4 &> /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/KAT_Cy5_frag_bamcoverage.log
+        
+Jobscript:
+#!/bin/sh
+# properties = {"type": "single", "rule": "frag_bamcoverage", "local": false, "input": ["/data/ShernLiquidBx/candetect_test_train/bams/KAT_Cy5_filt.bam"], "output": ["/data/ShernLiquidBx/candetect_test_train/qc/KAT_Cy5_bamcoverage.bg"], "wildcards": {"library": "KAT_Cy5"}, "params": {"bin": "10000", "blacklist": "/data/sundbyrt/reference/GRCh38/hg38-blacklist.v2.bed", "script": "/data/sundbyrt/repos/candetect_cfdna_pipeline/scripts/bamcoverage.sh", "threads": 4}, "log": ["/data/ShernLiquidBx/candetect_test_train/logs/preprocessing/KAT_Cy5_frag_bamcoverage.log"], "threads": 1, "resources": {"mem_mb": 120000, "mem_mib": 114441, "disk_mb": 22973, "disk_mib": 21909, "tmpdir": "<TBD>", "time": "48:00:00", "cpus": 30}, "jobid": 59, "cluster": {}}
+cd /vf/users/sundbyrt/repos/candetect_cfdna_pipeline && /usr/local/apps/snakemake/conda/envs/7.32.4/bin/python3.11 -m snakemake --snakefile '/vf/users/sundbyrt/repos/candetect_cfdna_pipeline/workflows/frag_reads.smk' --target-jobs 'frag_bamcoverage:library=KAT_Cy5' --cores 'all' --attempt 1 --force-use-threads  --resources 'mem_mb=120000' 'mem_mib=114441' 'disk_mb=22973' 'disk_mib=21909' 'cpus=30' --wait-for-files '/vf/users/sundbyrt/repos/candetect_cfdna_pipeline/.snakemake/tmp.bfhelw5p' '/data/ShernLiquidBx/candetect_test_train/bams/KAT_Cy5_filt.bam' --force --keep-target-files --keep-remote --max-inventory-time 0 --nocolor --notemp --no-hooks --nolock --ignore-incomplete --rerun-triggers 'params' 'input' 'mtime' 'code' 'software-env' --skip-script-cleanup  --conda-frontend 'mamba' --wrapper-prefix 'https://github.com/snakemake/snakemake-wrappers/raw/' --configfiles '/vf/users/sundbyrt/repos/candetect_cfdna_pipeline/config/test_train.yaml' --printshellcmds  --latency-wait 30 --scheduler 'greedy' --scheduler-solver-path '/usr/local/apps/snakemake/conda/envs/7.32.4/bin' --default-resources 'mem_mb=120000' 'disk_mb=max(2*input.size_mb, 1000)' 'tmpdir=system_tmpdir' 'time="48:00:00"' 'cpus=30' --mode 2 && touch '/vf/users/sundbyrt/repos/candetect_cfdna_pipeline/.snakemake/tmp.bfhelw5p/59.jobfinished' || (touch '/vf/users/sundbyrt/repos/candetect_cfdna_pipeline/.snakemake/tmp.bfhelw5p/59.jobfailed'; exit 1)
+
+Submitted job 59 with external jobid '45533804'.
+
+[Mon Jan 20 22:03:11 2025]
+rule frag_bamcoverage:
+    input: /data/ShernLiquidBx/candetect_test_train/bams/IAX_Cy3_filt.bam
+    output: /data/ShernLiquidBx/candetect_test_train/qc/IAX_Cy3_bamcoverage.bg
+    log: /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/IAX_Cy3_frag_bamcoverage.log
+    jobid: 60
+    benchmark: /data/ShernLiquidBx/candetect_test_train/benchmark/IAX_Cy3_frag_bamcoverage.benchmark.txt
+    reason: Missing output files: /data/ShernLiquidBx/candetect_test_train/qc/IAX_Cy3_bamcoverage.bg
+    wildcards: library=IAX_Cy3
+    resources: mem_mb=120000, mem_mib=114441, disk_mb=1713, disk_mib=1634, tmpdir=<TBD>, time=48:00:00, cpus=30
+
+
+        /data/sundbyrt/repos/candetect_cfdna_pipeline/scripts/bamcoverage.sh         /data/ShernLiquidBx/candetect_test_train/bams/IAX_Cy3_filt.bam         /data/ShernLiquidBx/candetect_test_train/qc/IAX_Cy3_bamcoverage.bg         10000         /data/sundbyrt/reference/GRCh38/hg38-blacklist.v2.bed         4 &> /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/IAX_Cy3_frag_bamcoverage.log
+        
+Jobscript:
+#!/bin/sh
+# properties = {"type": "single", "rule": "frag_bamcoverage", "local": false, "input": ["/data/ShernLiquidBx/candetect_test_train/bams/IAX_Cy3_filt.bam"], "output": ["/data/ShernLiquidBx/candetect_test_train/qc/IAX_Cy3_bamcoverage.bg"], "wildcards": {"library": "IAX_Cy3"}, "params": {"bin": "10000", "blacklist": "/data/sundbyrt/reference/GRCh38/hg38-blacklist.v2.bed", "script": "/data/sundbyrt/repos/candetect_cfdna_pipeline/scripts/bamcoverage.sh", "threads": 4}, "log": ["/data/ShernLiquidBx/candetect_test_train/logs/preprocessing/IAX_Cy3_frag_bamcoverage.log"], "threads": 1, "resources": {"mem_mb": 120000, "mem_mib": 114441, "disk_mb": 1713, "disk_mib": 1634, "tmpdir": "<TBD>", "time": "48:00:00", "cpus": 30}, "jobid": 60, "cluster": {}}
+cd /vf/users/sundbyrt/repos/candetect_cfdna_pipeline && /usr/local/apps/snakemake/conda/envs/7.32.4/bin/python3.11 -m snakemake --snakefile '/vf/users/sundbyrt/repos/candetect_cfdna_pipeline/workflows/frag_reads.smk' --target-jobs 'frag_bamcoverage:library=IAX_Cy3' --cores 'all' --attempt 1 --force-use-threads  --resources 'mem_mb=120000' 'mem_mib=114441' 'disk_mb=1713' 'disk_mib=1634' 'cpus=30' --wait-for-files '/vf/users/sundbyrt/repos/candetect_cfdna_pipeline/.snakemake/tmp.bfhelw5p' '/data/ShernLiquidBx/candetect_test_train/bams/IAX_Cy3_filt.bam' --force --keep-target-files --keep-remote --max-inventory-time 0 --nocolor --notemp --no-hooks --nolock --ignore-incomplete --rerun-triggers 'params' 'input' 'mtime' 'code' 'software-env' --skip-script-cleanup  --conda-frontend 'mamba' --wrapper-prefix 'https://github.com/snakemake/snakemake-wrappers/raw/' --configfiles '/vf/users/sundbyrt/repos/candetect_cfdna_pipeline/config/test_train.yaml' --printshellcmds  --latency-wait 30 --scheduler 'greedy' --scheduler-solver-path '/usr/local/apps/snakemake/conda/envs/7.32.4/bin' --default-resources 'mem_mb=120000' 'disk_mb=max(2*input.size_mb, 1000)' 'tmpdir=system_tmpdir' 'time="48:00:00"' 'cpus=30' --mode 2 && touch '/vf/users/sundbyrt/repos/candetect_cfdna_pipeline/.snakemake/tmp.bfhelw5p/60.jobfinished' || (touch '/vf/users/sundbyrt/repos/candetect_cfdna_pipeline/.snakemake/tmp.bfhelw5p/60.jobfailed'; exit 1)
+
+Submitted job 60 with external jobid '45533844'.
+[Mon Jan 20 22:09:20 2025]
+Error in rule frag_bamcoverage:
+    jobid: 60
+    input: /data/ShernLiquidBx/candetect_test_train/bams/IAX_Cy3_filt.bam
+    output: /data/ShernLiquidBx/candetect_test_train/qc/IAX_Cy3_bamcoverage.bg
+    log: /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/IAX_Cy3_frag_bamcoverage.log (check log file(s) for error details)
+    shell:
+        
+        /data/sundbyrt/repos/candetect_cfdna_pipeline/scripts/bamcoverage.sh         /data/ShernLiquidBx/candetect_test_train/bams/IAX_Cy3_filt.bam         /data/ShernLiquidBx/candetect_test_train/qc/IAX_Cy3_bamcoverage.bg         10000         /data/sundbyrt/reference/GRCh38/hg38-blacklist.v2.bed         4 &> /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/IAX_Cy3_frag_bamcoverage.log
+        
+        (one of the commands exited with non-zero exit code; note that snakemake uses bash strict mode!)
+    cluster_jobid: 45533844
+
+Error executing rule frag_bamcoverage on cluster (jobid: 60, external: 45533844, jobscript: /vf/users/sundbyrt/repos/candetect_cfdna_pipeline/.snakemake/tmp.bfhelw5p/snakejob.frag_bamcoverage.60.sh). For error details see the cluster log and the log files of the involved rule(s).
+Cleanup job metadata.
+Cleanup failed jobs output files.
+[Mon Jan 20 22:09:56 2025]
+Error in rule frag_bamcoverage:
+    jobid: 59
+    input: /data/ShernLiquidBx/candetect_test_train/bams/KAT_Cy5_filt.bam
+    output: /data/ShernLiquidBx/candetect_test_train/qc/KAT_Cy5_bamcoverage.bg
+    log: /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/KAT_Cy5_frag_bamcoverage.log (check log file(s) for error details)
+    shell:
+        
+        /data/sundbyrt/repos/candetect_cfdna_pipeline/scripts/bamcoverage.sh         /data/ShernLiquidBx/candetect_test_train/bams/KAT_Cy5_filt.bam         /data/ShernLiquidBx/candetect_test_train/qc/KAT_Cy5_bamcoverage.bg         10000         /data/sundbyrt/reference/GRCh38/hg38-blacklist.v2.bed         4 &> /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/KAT_Cy5_frag_bamcoverage.log
+        
+        (one of the commands exited with non-zero exit code; note that snakemake uses bash strict mode!)
+    cluster_jobid: 45533804
+
+Error executing rule frag_bamcoverage on cluster (jobid: 59, external: 45533804, jobscript: /vf/users/sundbyrt/repos/candetect_cfdna_pipeline/.snakemake/tmp.bfhelw5p/snakejob.frag_bamcoverage.59.sh). For error details see the cluster log and the log files of the involved rule(s).
+Cleanup job metadata.
+Cleanup failed jobs output files.
+[Mon Jan 20 22:47:55 2025]
+Error in rule frag_dedup:
+    jobid: 16
+    input: /data/ShernLiquidBx/candetect_test_train/bams/healthy5_raw.bam
+    output: /data/ShernLiquidBx/candetect_test_train/bams/healthy5_dedup.bam
+    log: /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/dedup/healthy5_frag_dedup.log (check log file(s) for error details)
+    shell:
+        
+        mkdir -p /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/dedup
+        /data/sundbyrt/repos/candetect_cfdna_pipeline/scripts/dedup.sh         /data/ShernLiquidBx/candetect_test_train/bams/healthy5_raw.bam         /data/ShernLiquidBx/candetect_test_train/bams/healthy5_dedup.bam         4 &> /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/dedup/healthy5_frag_dedup.log
+        
+        (one of the commands exited with non-zero exit code; note that snakemake uses bash strict mode!)
+    cluster_jobid: 45533742
+
+Error executing rule frag_dedup on cluster (jobid: 16, external: 45533742, jobscript: /vf/users/sundbyrt/repos/candetect_cfdna_pipeline/.snakemake/tmp.bfhelw5p/snakejob.frag_dedup.16.sh). For error details see the cluster log and the log files of the involved rule(s).
+Cleanup job metadata.
+Cleanup failed jobs output files.
+[Mon Jan 20 22:51:26 2025]
+Error in rule frag_dedup:
+    jobid: 17
+    input: /data/ShernLiquidBx/candetect_test_train/bams/healthy6_raw.bam
+    output: /data/ShernLiquidBx/candetect_test_train/bams/healthy6_dedup.bam
+    log: /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/dedup/healthy6_frag_dedup.log (check log file(s) for error details)
+    shell:
+        
+        mkdir -p /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/dedup
+        /data/sundbyrt/repos/candetect_cfdna_pipeline/scripts/dedup.sh         /data/ShernLiquidBx/candetect_test_train/bams/healthy6_raw.bam         /data/ShernLiquidBx/candetect_test_train/bams/healthy6_dedup.bam         4 &> /data/ShernLiquidBx/candetect_test_train/logs/preprocessing/dedup/healthy6_frag_dedup.log
+        
+        (one of the commands exited with non-zero exit code; note that snakemake uses bash strict mode!)
+    cluster_jobid: 45533739
+
+Error executing rule frag_dedup on cluster (jobid: 17, external: 45533739, jobscript: /vf/users/sundbyrt/repos/candetect_cfdna_pipeline/.snakemake/tmp.bfhelw5p/snakejob.frag_dedup.17.sh). For error details see the cluster log and the log files of the involved rule(s).
+Cleanup job metadata.
+Cleanup failed jobs output files.
+Exiting because a job execution failed. Look above for error message
+Complete log: .snakemake/log/2025-01-20T220300.095472.snakemake.log
+unlocking
+removing lock
+removing lock
+removed all locks

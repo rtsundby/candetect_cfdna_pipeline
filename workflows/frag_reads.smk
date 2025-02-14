@@ -119,8 +119,12 @@ rule all:
         library = FRAG_LIBS,
         ),
 #frag_plotcoverage
-    qcdir + "/frag_coverage.tsv",
-    qcdir + "/frag_coverage.pdf",
+    expand(qcdir + "/{library}_coverage.tsv",
+        library = FRAG_LIBS,
+        ),
+    expand(qcdir + "/{library}_coverage.pdf",
+        library = FRAG_LIBS,
+        ),
 #frag_multiqc
     qcdir + "/frag_multiqc.html",
     qcdir + "/frag_multiqc_data/multiqc_fastqc.txt",
@@ -367,6 +371,9 @@ rule frag_bamcoverage:
         blacklist = config["blklist"],
         script = frag_scriptdir+ "/bamcoverage.sh",
         threads = frag_threads,
+        read_type = config.get("seq_params", {}).get("read_type", "PE"),
+        read_length = config.get("seq_params", {}).get("read_length", 150),
+
     shell:
         """
         {params.script} \
@@ -374,18 +381,21 @@ rule frag_bamcoverage:
         {output} \
         {params.bin} \
         {params.blacklist} \
-        {params.threads} &> {log}
+        {params.threads} \
+        {params.read_type} \
+        {params.read_length} &> {log}
         """
 # Make deepTools plotCoverage coverage maps for all filtered bams
 rule frag_plotcoverage:
-    benchmark: bench_dir + "/frag_plotcoverage.benchmark.txt",
+    benchmark: bench_dir + "/{library}_frag_plotcoverage.benchmark.txt",
     resources:
         time="3:00:00"
-    input: expand(frag_bams + "/{library}_filt.bam", library = FRAG_LIBS),
-    log: logdir + "/frag_plotcoverage.log",
+    input: 
+        frag_bams + "/{library}_filt.bam"
+    log: logdir + "/{library}_frag_plotcoverage.log",
     output:
-        raw = qcdir + "/frag_coverage.tsv",
-        plot = qcdir + "/frag_coverage.pdf",
+        raw = qcdir + "/{library}_coverage.tsv",
+        plot = qcdir + "/{library}_coverage.pdf",
     params:
         blacklist = config["blklist"],
         script = frag_scriptdir+ "/plotcoverage.sh",
@@ -401,35 +411,51 @@ rule frag_plotcoverage:
         """
 # Aggregate QC files using MultiQC
 rule frag_multiqc:
-    benchmark: bench_dir + "/frag_multiqc.benchmark.txt",
+    benchmark: bench_dir + "/frag_multiqc.benchmark.txt"
     resources:
         time="3:00:00"
     input:
-        expand(logdir + "/fastp/{library}_frag_fastp.json", library = FRAG_LIBS),
-        expand(qcdir + "/{library}_{processing}_{read}_fastqc.zip", library = FRAG_LIBS, processing = ["raw", "processed", "unpaired"], read = [PE1,PE2]),
-        expand(qcdir + "/{library}_{processing}_samstats.txt", library = FRAG_LIBS, processing = ["raw","filt"]),
-        expand(qcdir + "/{library}_{processing}_flagstat.txt", library = FRAG_LIBS, processing = ["raw","filt"]),
-        expand(qcdir + "/{library}_picard_depth.txt", library = FRAG_LIBS),
-        qcdir + "/deeptools_frag_lengths.txt",
-        qcdir + "/frag_coverage.tsv",
-    log: logdir + "/frag_multiqc.log",
+        fastp = expand(logdir + "/fastp/{library}_frag_fastp.json", library=FRAG_LIBS),  
+        fastqc = expand(qcdir + "/{library}_{processing}_{read}_fastqc.zip", 
+                       library=FRAG_LIBS, 
+                       processing=["raw", "processed", "unpaired"], 
+                       read=[PE1,PE2]),
+        samstats = expand(qcdir + "/{library}_{processing}_samstats.txt", 
+                         library=FRAG_LIBS, 
+                         processing=["raw","filt"]),
+        flagstat = expand(qcdir + "/{library}_{processing}_flagstat.txt", 
+                         library=FRAG_LIBS, 
+                         processing=["raw","filt"]),
+        picard = expand(qcdir + "/{library}_picard_depth.txt", library=FRAG_LIBS),
+        frag_len = qcdir + "/deeptools_frag_lengths.txt",
+        coverage = expand(qcdir + "/{library}_coverage.tsv", library=FRAG_LIBS)
     output:
-        qcdir + "/frag_multiqc.html",
-        qcdir + "/frag_multiqc_data/multiqc_fastqc.txt",
-        qcdir + "/frag_multiqc_data/multiqc_samtools_stats.txt",
-        qcdir + "/frag_multiqc_data/multiqc_picard_wgsmetrics.txt",
-        qcdir + "/frag_multiqc_data/multiqc_samtools_flagstat.txt",
+        html = qcdir + "/frag_multiqc.html",
+        fastqc = qcdir + "/frag_multiqc_data/multiqc_fastqc.txt",
+        samstats = qcdir + "/frag_multiqc_data/multiqc_samtools_stats.txt",
+        picard = qcdir + "/frag_multiqc_data/multiqc_picard_wgsmetrics.txt",
+        flagstat = qcdir + "/frag_multiqc_data/multiqc_samtools_flagstat.txt"
+    log: logdir + "/frag_multiqc.log"
     params:
-        out_dir = qcdir,
-        out_name = "frag_multiqc",
-        script = frag_scriptdir+ "/multiqc.sh",
-        threads = frag_threads,
+        script = frag_scriptdir + "/multiqc.sh",
+        input_files = lambda w, input: " ".join([
+            *input.fastp,
+            *input.fastqc,
+            *input.samstats,
+            *input.flagstat,
+            *input.picard,
+            input.frag_len,
+            *input.coverage
+        ])
     shell:
         """
+        mkdir -p {qcdir}/frag_multiqc_data
+        
         {params.script} \
-        "{input}" \
-        {params.out_name} \
-        {params.out_dir} &> {log}
+            '{params.input_files}' \
+            frag_multiqc \
+            {qcdir} \
+            &> {log}
         """
 # Make a tab-separated aggregate QC table
 checkpoint frag_make_qc_tsv:

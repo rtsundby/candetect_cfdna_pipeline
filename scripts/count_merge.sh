@@ -35,8 +35,11 @@ do
         len_class="unknown"  # Fallback in case neither short nor long is found
     fi
 
-    # Add file name to each line with library name
-    awk -v lib="$lib_name" -v len_class="$len_class" '{print lib"\t"len_class"\t"$0}' $file >> $out_tsv
+    # Add file name to each line with library name and filter out any rows containing nan/NaN
+    awk -v lib="$lib_name" -v len_class="$len_class" '
+        tolower($0) !~ /nan/ {
+            print lib"\t"len_class"\t"$0
+        }' $file >> $out_tsv
    
     #awk -v lib="$lib_name" '{print lib"\t" $0}' $file |
     #    # Send to output
