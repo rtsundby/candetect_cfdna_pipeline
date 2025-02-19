@@ -62,8 +62,15 @@ frag_libs = frag_libs[frag_libs.readable == True]
 
 # Make the dictionary
 FRAG_LIBS = frag_libs["library"].tolist()
+print("FRAG_LIBS:", FRAG_LIBS)
 frag_libs_file_indict = frag_libs["file"].tolist()
 frag_lib_dict = dict(zip(FRAG_LIBS, frag_libs_file_indict))
+
+#Check that all BAM files exist
+print("Checking BAM files:")
+for lib in FRAG_LIBS:
+    bam_path = f"{frag_bams}/{lib}_filt.bam"
+    print(f"  {bam_path} exists: {os.path.exists(bam_path)}")
 
 # Make  a list of healthy libraries
 FRAG_HEALTHY_LIBRARIES = frag_libs[frag_libs['cohort'] == normal_control]['library'].tolist()
@@ -76,25 +83,31 @@ for c1, c2 in it.combinations(COHORTS,2):
     COHORT_2.append(c2)
     print(c1,c2)
 
+def get_cohort_pairs():
+    pairs = []
+    for c1, c2 in it.combinations(COHORTS, 2):
+        pairs.append((c1, c2))
+    return pairs
+
 rule all:
-  input: 
-    # Raw histograms
-    expand(nmf_raw_hist_dir + "/{lib}_metrics.txt", lib=frag_libs["library"]),
-    expand(nmf_raw_hist_dir + "/{lib}_histogram.pdf", lib=frag_libs["library"]),
-    # Aggregated histograms
-    nmf_agg_hist_dir + "/count_histogram.csv",
-    nmf_agg_hist_dir + "/freq_histogram.30_700.csv",
-    # NMF model outputs
-    expand(nmf_dir + "/probs/{c1}_v_{c2}.n={nc}.csv", c1=COHORT_1, c2=COHORT_2, nc=range(2, config["max_nmf_components"] + 1)),
-    expand(nmf_dir + "/model/{c1}_v_{c2}.n={nc}.pkl", c1=COHORT_1, c2=COHORT_2, nc=range(2, config["max_nmf_components"] + 1)),
-    expand(nmf_dir + "/coeffs/{c1}_v_{c2}.n={nc}.csv", c1=COHORT_1, c2=COHORT_2, nc=range(2, config["max_nmf_components"] + 1)),
-    # aucs
-    nmf_dir + "/aucs/aucs.csv",
-    nmf_dir + "/aucs/best_med_aucs.csv",
-    expand(nmf_scores, nc = range(2,max_components+1)),
+    input:
+        # Raw histograms
+        expand(nmf_raw_hist_dir + "/{lib}_metrics.txt", lib=FRAG_LIBS),
+        expand(nmf_raw_hist_dir + "/{lib}_histogram.pdf", lib=FRAG_LIBS),
+        # Aggregated histograms
+        nmf_agg_hist_dir + "/count_histogram.csv",
+        nmf_agg_hist_dir + "/freq_histogram.30_700.csv",
+        # NMF outputs for each cohort pair and component number
+        expand(nmf_dir + "/probs/{c1}_v_{c2}.n={nc}.csv",
+            c1=COHORT_1, c2=COHORT_2, nc=range(2, config["max_nmf_components"] + 1)),
+        expand(nmf_dir + "/model/{c1}_v_{c2}.n={nc}.pkl",
+            c1=COHORT_1, c2=COHORT_2, nc=range(2, config["max_nmf_components"] + 1)),
+        expand(nmf_dir + "/coeffs/{c1}_v_{c2}.n={nc}.csv",
+            c1=COHORT_1, c2=COHORT_2, nc=range(2, config["max_nmf_components"] + 1))
+
 rule raw_histograms:
     resources:
-        time="3:00:00"
+        time="5:00:00"
     input:
         bam = frag_bams + "/{lib}_filt.bam",
     output:
@@ -124,22 +137,20 @@ rule raw_histograms:
         """
 rule agg_histograms:
     resources:
-        time="0:90:00"
+        time="0:120:00"
     input:
-        expand(nmf_raw_hist_dir + "/{lib}_{out}",
-                lib=frag_libs["library"],
-                out=["metrics.txt","histogram.pdf"],
-                ),
+        metrics = expand(nmf_raw_hist_dir + "/{lib}_metrics.txt", lib=FRAG_LIBS),
+        plots = expand(nmf_raw_hist_dir + "/{lib}_histogram.pdf", lib=FRAG_LIBS)
     output:
         counts = nmf_agg_hist_dir + "/count_histogram.csv",
-        freqs  = nmf_agg_hist_dir + "/freq_histogram.30_700.csv",
+        freqs = nmf_agg_hist_dir + "/freq_histogram.30_700.csv"
     log:
-        logdir + "/nmf/agg_histograms.log",
+        logdir + "/nmf/agg_histograms.log"
     params:
         hist_dir = nmf_raw_hist_dir,
-        out_dir  = nmf_agg_hist_dir,
-        logs_dir  = logdir + "/nmf",
-        script   = frag_scriptdir + "/agg_histograms.py",
+        out_dir = nmf_agg_hist_dir,
+        logs_dir = logdir + "/nmf",
+        script = frag_scriptdir + "/agg_histograms.py"
     shell:
         """
         mkdir -p {params.out_dir}
@@ -153,62 +164,31 @@ rule agg_histograms:
         """
 rule nmf:
     resources:
-        time="0:20:00",
+        time="0:30:00",
         mem_gb="16g",
         cpus="8",
     input:
         freq_csv = nmf_agg_hist_dir + "/freq_histogram.30_700.csv",
-        existing_model = lambda wildcards: config["existing_nmf_model"] \
-            if config["existing_nmf_model"] != "no" else "",
+        counts = nmf_agg_hist_dir + "/count_histogram.csv",
+
+        raw_metrics = expand(nmf_raw_hist_dir + "/{lib}_metrics.txt", lib=FRAG_LIBS),
+        raw_plots = expand(nmf_raw_hist_dir + "/{lib}_histogram.pdf", lib=FRAG_LIBS)
     output:
         probs = nmf_dir + "/probs/{c1}_v_{c2}.n={nc}.csv",
         coeffs = nmf_dir + "/coeffs/{c1}_v_{c2}.n={nc}.csv",
-        model = nmf_dir + "/model/{c1}_v_{c2}.n={nc}.pkl",
+        model = nmf_dir + "/model/{c1}_v_{c2}.n={nc}.pkl"
     log:
         logdir + "/nmf/model/{c1}_v_{c2}.n={nc}.log"
     params:
         out_dir = nmf_dir,
         log_dir = logdir + "/nmf/model",
-        script  = frag_scriptdir + "/nmf_model.py",
+        script = frag_scriptdir + "/nmf_model.py",
         samplelist = samples,
-        nc = lambda wildcards: wildcards.nc,
-        c1 = lambda wildcards: wildcards.c1,
-        c2 = lambda wildcards: wildcards.c2,
-        name = lambda wildcards: f"{wildcards.c1}_v_{wildcards.c2}.n={wildcards.nc}",
-        existing_model_dir=lambda wildcards: config["existing_nmf_model"],
-        model_symlink=lambda wildcards: nmf_dir + f"/model/{wildcards.c1}_v_{wildcards.c2}.n={wildcards.nc}.pkl",
+        existing_model = config["existing_nmf_model"]
     shell:
         """
-        mkdir -p {params.out_dir} {params.out_dir}/model {params.log_dir}
+        mkdir -p {params.out_dir}/{{model,probs,coeffs}} {params.log_dir}
 
-        # Search for specific existing model .pkl (w/ all permutations of nc and c1), symlink
-        if [ "{input.existing_model}" != "" ]; then
-            echo "Using existing model directory: {input.existing_model}"
-            existing_model_file={params.existing_model_dir}/{wildcards.c1}_v_{wildcards.c2}.n={wildcards.nc}.pkl
-            if [ -f "$existing_model_file" ]; then
-                echo "Found existing model: $existing_model_file"
-                # Check if symlink already exists
-                if [ ! -e {params.model_symlink} ]; then
-                    echo "Creating symlink to output directory: {params.model_symlink}"
-                    ln -sf "$existing_model_file" {params.model_symlink}
-                else
-                    echo "Symlink already exists: {params.model_symlink}, skipping creation."
-                fi
-            else
-                echo "No existing model found for {wildcards.c1}_v_{wildcards.c2}.n={wildcards.nc}"
-            fi
-        fi
-
-        # Determine if using an existing model or training a new one using symlink
-        if [ -f {params.model_symlink} ]; then
-            existing_model="{params.model_symlink}"
-            echo "Using existing model: $existing_model"
-        else
-            existing_model=""
-            echo "No model found. Training a new one."
-        fi
-
-        # Run the model script
         python3 {params.script} \
             --freq_csv {input.freq_csv} \
             --samplelist {params.samplelist} \
@@ -216,13 +196,13 @@ rule nmf:
             --cohort1 {wildcards.c1} \
             --cohort2 {wildcards.c2} \
             --out_dir {params.out_dir} \
-            --existing_model $existing_model \
-            --name {params.name} \
+            --existing_model {params.existing_model} \
+            --name {wildcards.c1}_v_{wildcards.c2}.n={wildcards.nc} \
             &> {log}
         """
 rule nmf_aucs:
     resources:
-        time="0:05:00",
+        time="0:25:00",
     input:
         expand(nmf_probs,
                 nc = range(2,max_components+1)
