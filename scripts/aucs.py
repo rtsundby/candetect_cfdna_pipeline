@@ -7,7 +7,7 @@ import pandas as pd
 import seaborn as sns
 from sklearn.metrics import roc_auc_score, roc_curve
 
-print("Global variables at start:", globals().keys())  
+print("Global variables at start:", globals().keys()) 
 
 def get_optimal_threshold(y_true, y_score):
     fpr, tpr, thresh = roc_curve(y_true, y_score)
@@ -43,10 +43,10 @@ def get_scores_and_thresholds(probs_df, dx_df, c1, c2):
     probs_df["med_score_correct_pred"] = probs_df["med_score_pred_class"] == probs_df["cohort_int"]
 
     # Get avg optimal threshold
-    optimal_threshold = get_optimal_threshold(probs_df["cohort_int"], probs_df["avg_score"])
-    probs_df["avg_score_cutoff"] = optimal_threshold
-    probs_df["avg_score_pred_class"] = probs_df["avg_score"].map(lambda x: 1 if x >= optimal_threshold else 0)
-    probs_df["avg_score_correct_pred"] = probs_df["avg_score_pred_class"] == probs_df["cohort_int"]
+    #optimal_threshold = get_optimal_threshold(probs_df["cohort_int"], probs_df["avg_score"])
+    #probs_df["avg_score_cutoff"] = optimal_threshold
+    #probs_df["avg_score_pred_class"] = probs_df["avg_score"].map(lambda x: 1 if x >= optimal_threshold else 0)
+    #probs_df["avg_score_correct_pred"] = probs_df["avg_score_pred_class"] == probs_df["cohort_int"]
 
     return probs_df
 

@@ -31,7 +31,7 @@ threads             = config["threads"]
 # Directory values derived from configuration YAML
 benchdir            = data_dir + "/benchmark"
 frag                = data_dir + "/analysis/cfdna_wgs"
-frag_bams           = data_dir + "/bams"
+frag_bams           = config["frag_bams"]
 frag_fastqs         = data_dir + "/fastq"
 frag_scriptdir      = frag_repo +  "/scripts"
 logdir              = data_dir + "/logs/NMF_size"
@@ -45,10 +45,10 @@ nc                  = range(2,config["max_nmf_components"]+1)
 nmf_dir             =  frag + "/nmf"
 
 nmf_agg_hist_dir    = nmf_dir + "/agg"
-nmf_comps           = [f"{nmf_dir}/model/{c1}_v_{c2}.n={{nc}}.pkl" for (c1,c2) in it.combinations(COHORTS,2)]
-nmf_probs           = [f"{nmf_dir}/probs/{c1}_v_{c2}.n={{nc}}.csv" for (c1,c2) in it.combinations(COHORTS,2)]
+nmf_comps           = [f"{nmf_dir}/model/{c1}_vs_{c2}.n={{nc}}.pkl" for (c1,c2) in it.combinations(COHORTS,2)]
+nmf_probs           = [f"{nmf_dir}/probs/{c1}_vs_{c2}.n={{nc}}.csv" for (c1,c2) in it.combinations(COHORTS,2)]
 nmf_raw_hist_dir    = nmf_dir + "/raw"
-nmf_scores          = [f"{nmf_dir}/scores/{c1}_v_{c2}.n={{nc}}.csv" for (c1,c2) in it.combinations(COHORTS,2)]
+nmf_scores          = [f"{nmf_dir}/scores/{c1}_vs_{c2}.n={{nc}}.csv" for (c1,c2) in it.combinations(COHORTS,2)]
 
 ####------ Read samples ------####
 frag_libs = pd.read_table(config["samples"])
@@ -75,19 +75,31 @@ for lib in FRAG_LIBS:
 # Make  a list of healthy libraries
 FRAG_HEALTHY_LIBRARIES = frag_libs[frag_libs['cohort'] == normal_control]['library'].tolist()
 
-#Define cohort comparisons (one-versus-one)
-COHORT_1 = []
-COHORT_2 = []
-for c1, c2 in it.combinations(COHORTS,2):
-    COHORT_1.append(c1)
-    COHORT_2.append(c2)
-    print(c1,c2)
+pairs = []
+pairs = list(it.combinations(COHORTS, 2))
+print(pairs)
+print([pair[0] for pair in pairs])
+
+#for c1, c2 in it.combinations(COHORTS, 2):
+#    pairs.append((c1, c2))
+#    print(f"{c1} vs {c2}") 
 
 def get_cohort_pairs():
-    pairs = []
-    for c1, c2 in it.combinations(COHORTS, 2):
-        pairs.append((c1, c2))
     return pairs
+
+#Define cohort comparisons (one-versus-one)
+#COHORT_1 = []
+#COHORT_2 = []
+#for c1, c2 in it.combinations(COHORTS,2):
+#    COHORT_1.append(c1)
+#    COHORT_2.append(c2)
+#    print(c1,c2)
+
+#def get_cohort_pairs():
+#    pairs = []
+#    for c1, c2 in it.combinations(COHORTS, 2):
+#        pairs.append((c1, c2))
+#    return pairs
 
 rule all:
     input:
@@ -98,12 +110,17 @@ rule all:
         nmf_agg_hist_dir + "/count_histogram.csv",
         nmf_agg_hist_dir + "/freq_histogram.30_700.csv",
         # NMF outputs for each cohort pair and component number
-        expand(nmf_dir + "/probs/{c1}_v_{c2}.n={nc}.csv",
-            c1=COHORT_1, c2=COHORT_2, nc=range(2, config["max_nmf_components"] + 1)),
-        expand(nmf_dir + "/model/{c1}_v_{c2}.n={nc}.pkl",
-            c1=COHORT_1, c2=COHORT_2, nc=range(2, config["max_nmf_components"] + 1)),
-        expand(nmf_dir + "/coeffs/{c1}_v_{c2}.n={nc}.csv",
-            c1=COHORT_1, c2=COHORT_2, nc=range(2, config["max_nmf_components"] + 1))
+        expand(nmf_dir + "/probs/{fnames}.n={nc}.csv",
+            fnames = [f"{c1}_vs_{c2}" for c1,c2 in pairs], nc=range(2, config["max_nmf_components"] + 1)),
+        expand(nmf_dir + "/model/{fnames}.n={nc}.pkl",
+            fnames = [f"{c1}_vs_{c2}" for c1,c2 in pairs], nc=range(2, config["max_nmf_components"] + 1)),
+        expand(nmf_dir + "/coeffs/{fnames}.n={nc}.csv",
+            fnames = [f"{c1}_vs_{c2}" for c1,c2 in pairs], nc=range(2, config["max_nmf_components"] + 1)),
+        #nmf aucs
+        nmf_dir + "/aucs/aucs.csv",
+        nmf_dir + "/aucs/best_med_aucs.csv",
+        expand(nmf_scores,
+                nc = range(2,max_components+1))        
 
 rule raw_histograms:
     resources:
@@ -174,11 +191,11 @@ rule nmf:
         raw_metrics = expand(nmf_raw_hist_dir + "/{lib}_metrics.txt", lib=FRAG_LIBS),
         raw_plots = expand(nmf_raw_hist_dir + "/{lib}_histogram.pdf", lib=FRAG_LIBS)
     output:
-        probs = nmf_dir + "/probs/{c1}_v_{c2}.n={nc}.csv",
-        coeffs = nmf_dir + "/coeffs/{c1}_v_{c2}.n={nc}.csv",
-        model = nmf_dir + "/model/{c1}_v_{c2}.n={nc}.pkl"
+        probs = nmf_dir + "/probs/{fnames}.n={nc}.csv",
+        coeffs = nmf_dir + "/coeffs/{fnames}.n={nc}.csv",
+        model = nmf_dir + "/model/{fnames}.n={nc}.pkl"
     log:
-        logdir + "/nmf/model/{c1}_v_{c2}.n={nc}.log"
+        logdir + "/nmf/model/{fnames}.n={nc}.log"
     params:
         out_dir = nmf_dir,
         log_dir = logdir + "/nmf/model",
@@ -193,11 +210,11 @@ rule nmf:
             --freq_csv {input.freq_csv} \
             --samplelist {params.samplelist} \
             --n_components {wildcards.nc} \
-            --cohort1 {wildcards.c1} \
-            --cohort2 {wildcards.c2} \
+            --cohort1 $(echo "{wildcards.fnames}" | sed 's/_vs_.*//') \
+            --cohort2 $(echo "{wildcards.fnames}" | sed 's/.*_vs_//') \
             --out_dir {params.out_dir} \
             --existing_model {params.existing_model} \
-            --name {wildcards.c1}_v_{wildcards.c2}.n={wildcards.nc} \
+            --name {wildcards.fnames}.n={wildcards.nc} \
             &> {log}
         """
 rule nmf_aucs:

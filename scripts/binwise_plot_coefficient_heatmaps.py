@@ -80,7 +80,7 @@ armz_df = pd.read_csv(ARMZ_CSV, index_col=0)
 arm_names = armz_df.columns.to_list()
 
 for feature in FEATURES:
-    coeffs_dir = f"{DATA_DIR}/{feature}/coeffs"
+    coeffs_dir = f"{DATA_DIR}"
     coeff_heatmap_dir = f"{DATA_DIR}/{feature}/plots/coeff_heatmap"
     os.makedirs(coeff_heatmap_dir, exist_ok=True)
 

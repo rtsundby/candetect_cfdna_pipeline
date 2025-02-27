@@ -31,7 +31,7 @@ threads             = config["threads"]
 # Directory values derived from data_dir in configuration YAML
 benchdir            = data_dir + "/benchmark"
 frag                = data_dir + "/analysis/cfdna_wgs"
-frag_bams           = data_dir + "/bams"
+frag_bams           = config["frag_bams"]
 frag_fastqs         = data_dir + "/fastq"
 frag_scriptdir      = frag_repo +  "/scripts"
 logdir              = data_dir + "/logs/bin_wise_fragmentomics"
@@ -110,27 +110,36 @@ rule all:
     bin_wise_frag + "/binwise_armz.clean.csv",
     bin_wise_frag + "/binwise_ratio.norm_rows.clean.csv",
 # binwise_model
-    expand(bin_wise_frag + "/probs/{c1}_v_{c2}.csv", 
+    expand(bin_wise_frag + "/model/probs/{c1}_v_{c2}.csv", 
     zip,
         c1=COHORT_1,
         c2=COHORT_2
     ),
-    expand(bin_wise_frag + "/coeffs/{c1}_v_{c2}.csv", 
+    expand(bin_wise_frag + "/model/coeffs/{c1}_v_{c2}.csv", 
     zip,
         c1=COHORT_1,
         c2=COHORT_2
     ),
 # aucs
-    bin_wise_frag + "/aucs/aucs.csv",
+    bin_wise_frag + "/aucs/aucs/aucs.csv",
     expand(bin_wise_frag + "/scores/{c1}_v_{c2}.csv",
     zip,
         c1 = COHORT_1,
         c2 = COHORT_2
     ),
 #prob plots
-    logdir + "/plot_probs/plot_probs.log",
+    expand(bin_wise_frag + "/plots/prob_per_repeat/{c1}_v_{c2}.pdf", 
+    zip,
+        c1 = COHORT_1,
+        c2 = COHORT_2
+    ),
+        expand(bin_wise_frag + "/plots/prob_per_sample/{c1}_v_{c2}.pdf", 
+    zip,
+        c1 = COHORT_1,
+        c2 = COHORT_2
+    ),
 # coefficient heatmaps
-    logdir + "/coeff_heatmaps/binwise_plot_coeff_heatmaps.log",
+    bin_wise_frag + "/binwise/plots/coeff_heatmap/binwise_armz.clean.pdf",
 
 rule filt_bam_to_frag_bed:
     benchmark: benchdir + "/{library}_filt_bam_to_frag_bed.benchmark.txt",
@@ -369,14 +378,14 @@ rule binwise_features:
         """      
 rule binwise_model:
     resources:
-        time="0:10:00",
+        time="0:60:00",
         mem_gb="2g",
         cpus="8",
     input:
-       bin_wise_frag + "/binwise_ratio.norm_rows.clean.csv",
+        ratio = bin_wise_frag + "/binwise_ratio.norm_rows.clean.csv",
     output:
-        probs = bin_wise_frag + "/probs/{c1}_v_{c2}.csv",
-        coeffs = bin_wise_frag + "/coeffs/{c1}_v_{c2}.csv",
+        probs = bin_wise_frag + "/model/probs/{c1}_v_{c2}.csv",
+        coeffs = bin_wise_frag + "/model/coeffs/{c1}_v_{c2}.csv",
     log:
         logdir + "/model/binwise_model_{c1}_v_{c2}.log"
     params:
@@ -398,24 +407,26 @@ rule binwise_model:
         if [ "{params.model}" != "None" ]; then
             echo "Using existing model from config: {params.model}"
             python3 {params.script} \
-            --data_dir {params.data_dir} \
-            --armz_csv {input.arm_z} \
+            --armz_csv {params.arm_z} \
+            --ratio_csv {input.ratio} \
+            --samplelist {params.sample_list} \
+            --cohort1 {params.c1} \
+            --cohort2 {params.c2} \
             --model_dir {params.model} \
             --name {params.name} \
             --out_dir {params.out_dir} \
-            --out_dirprob {params.out_dirprob} \
-            --out_dircoeffs {params.out_dircoeffs} \
             --existing_model \
             &> {log}
         else
             echo "Training new model"
             python3 {params.script} \
-            --data_dir {params.data_dir} \
-            --armz_csv {input.arm_z} \
+            --armz_csv {params.arm_z} \
+            --ratio_csv {input.ratio} \
+            --samplelist {params.sample_list} \
+            --cohort1 {params.c1} \
+            --cohort2 {params.c2} \
             --name {params.name} \
             --out_dir {params.out_dir} \
-            --out_dirprob {params.out_dirprob} \
-            --out_dircoeffs {params.out_dircoeffs} \
             &> {log}
         fi
         """
@@ -423,14 +434,14 @@ rule binwise_aucs:
     resources:
         time="2:00:00",
     input:
-        expand(bin_wise_frag + "/probs/{c1}_v_{c2}.csv",
+        expand(bin_wise_frag + "/model/probs/{c1}_v_{c2}.csv",
         zip,
             c1 = COHORT_1,
             c2 = COHORT_2
         ),
         sample_list = samples,
     output:
-        bin_wise_frag + "/aucs/aucs.csv",
+        bin_wise_frag + "/aucs/aucs/aucs.csv",
         expand(bin_wise_frag + "/scores/{c1}_v_{c2}.csv",
                 zip,
                 c1 = COHORT_1,
@@ -442,24 +453,28 @@ rule binwise_aucs:
         out_dir = bin_wise_frag,
         out_dir_auc = bin_wise_frag + "/aucs",
         out_dir_scores = bin_wise_frag + "/scores",
-        script = frag_scriptdir + "/aucs.py",
-        probs_dir = bin_wise_frag + "/probs",
+        script = frag_scriptdir + "/binwise_auc.py",
+        probs_dir = bin_wise_frag + "/model/probs",
         log_dir = logdir + "/auc",
+        cohorts = ",".join(config["cohorts"]),
     shell:
         """
-        mkdir -p {params.out_dir_auc} {params.out_dir_scores} {params.log_dir} \
+        mkdir -p {params.out_dir_auc} 
+        mkdir -p {params.out_dir_scores} 
+        mkdir -p {params.log_dir} 
 
         python3 {params.script} \
         --probs_dir {params.probs_dir} \
         --samplelist {input.sample_list} \
         --out_dir {params.out_dir} \
+        --cohorts {params.cohorts} \
         &> {log}
         """
 rule plot_probs:
     resources:
         time="0:20:00", 
     input:
-        expand(bin_wise_frag + "/probs/{c1}_v_{c2}.csv",
+        expand(bin_wise_frag + "/model/probs/{c1}_v_{c2}.csv",
         zip,
             c1 = COHORT_1,
             c2 = COHORT_2
@@ -471,7 +486,7 @@ rule plot_probs:
         out_dir = bin_wise_frag,
         log_dir = logdir + "/plot_probs",
         script  = frag_scriptdir + "/plot_probs.py",
-        probs_dir = bin_wise_frag + "/probs",
+        probs_dir = bin_wise_frag + "/model/probs",
     shell:
         """
         mkdir -p {params.out_dir}

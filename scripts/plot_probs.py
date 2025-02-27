@@ -68,7 +68,9 @@ if __name__ == '__main__':
 
     ############################################################################
     # Make plots for each OVO comparison
-    cohorts_df = pd.read_csv(SAMPLELIST, index_col=0)
+    cohorts_df = pd.read_csv(SAMPLELIST, sep='\t', header=0)
+    print("cohort index")
+    print(cohorts_df['library'])
 
     for csv in sorted(glob.glob(f"{PROBS_DIR}/*.csv")):
         # parse path to get "<c1>_v_<c2>" OR "<c1>_v_<c2>.n=<k>"
@@ -79,8 +81,13 @@ if __name__ == '__main__':
 
         # get probabilities df and cohorts
         probs_df = pd.read_csv(csv, index_col=0)
+        print("probs df")
+        print(probs_df)
+        print("probs df index")
+        print(probs_df.index)
         REPEAT_COLS = probs_df.columns
-        probs_df["cohort"] = cohorts_df.loc[probs_df.index]["cohort"]
+#        probs_df["cohort"] = cohorts_df.loc[probs_df.index]["cohort"]
+        probs_df = probs_df.merge(cohorts_df[['library', 'cohort']], left_index=True, right_on='library', how='left')
 
         melted_df = pd.melt(probs_df.reset_index(),
                         id_vars=["library", "cohort"],

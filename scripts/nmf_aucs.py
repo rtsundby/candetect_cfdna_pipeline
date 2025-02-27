@@ -58,7 +58,7 @@ os.makedirs(aucs_dir, exist_ok=True)
 os.makedirs(aucs_plots_dir, exist_ok=True)
 os.makedirs(aucs_v_comp_plots_dir, exist_ok=True)
 
-cohorts_df = pd.read_csv(SAMPLELIST, index_col=0)
+cohorts_df = pd.read_csv(SAMPLELIST, sep='\t', index_col=0)
 
 ################################################################################
 # Compute final score and thresholds for each comparison
@@ -71,7 +71,7 @@ for c1, c2 in it.combinations(COHORTS, 2):
     best_row = None
     for n_comp in range(2,MAX_COMPONENTS+1):
         print("c1:", c1, "c2:", c2)
-        name = f"{c1}_v_{c2}.n={n_comp}"
+        name = f"{c1}_vs_{c2}.n={n_comp}"
         row = [c1, c2, n_comp]
         
         # get scores df
@@ -83,7 +83,8 @@ for c1, c2 in it.combinations(COHORTS, 2):
 
         # get aucs for each fold, avg_score, med_score
         y_true = scores_df["cohort_int"]
-        scores_df = scores_df.iloc[:,0:12]
+        print(y_true)
+        scores_df = scores_df.iloc[:,0:11]
         row += aucs.get_aucs(scores_df, y_true)
         rows.append(row)
 
@@ -116,17 +117,17 @@ df = best_aucs_df.pivot(index="cohort1", columns="cohort2",
 df = df.reindex(COHORTS[:-1])
 df = df[COHORTS[1:]]
 aucs.plot_aucs_heatmap(df,aucs_plots_dir,"med_score")
-df = best_aucs_df.pivot(index="cohort1", columns="cohort2",
-                values="avg_score")
-df = df.reindex(COHORTS[:-1])
-df = df[COHORTS[1:]]
-aucs.plot_aucs_heatmap(df,aucs_plots_dir,"avg_score")
+#df = best_aucs_df.pivot(index="cohort1", columns="cohort2",
+#                values="avg_score")
+#df = df.reindex(COHORTS[:-1])
+#df = df[COHORTS[1:]]
+#aucs.plot_aucs_heatmap(df,aucs_plots_dir,"avg_score")
 
 ############################################################################
 # Plot AUCs per n-component individually
 for c1, c2 in it.combinations(COHORTS, 2):
     print("c1:", c1, "c2:", c2)
-    name = f"{c1}_v_{c2}"
+    name = f"{c1}_vs_{c2}"
     df = aucs_df.loc[(aucs_df["cohort1"] == c1) & (aucs_df["cohort2"] == c2)]
     df = pd.melt(df, id_vars=["n_components"], value_vars=df.columns[-12:])
     df = df.rename(columns={"variable":"repeat","value":"auc"})
@@ -181,16 +182,13 @@ for c1, c2 in it.combinations(COHORTS, 2):
 # Plot AUCs per n-component together
 
 # mapping cohorts to corresponding subplot axis coords
-c1_mapping = {
-    "Healthy": 0,
-    "PN": 1,
-    "AN": 2,
-}
-c2_mapping = {
-    "PN": 0,
-    "AN": 1,
-    "MPNST": 2
-}
+c1_mapping = {}
+c2_mapping = {}
+iter = 0
+for c1, c2 in it.combinations(COHORTS, 2):
+    c1_mapping[c1]=iter
+    c2_mapping[c2]=iter
+    iter +=1
 
 fig, axs = plt.subplots(3, 3, figsize=(12, 12))
 for c1, c2 in it.combinations(COHORTS, 2):
