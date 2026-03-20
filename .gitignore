@@ -1,0 +1,17 @@
+# Ignore hidden directories
+./snake*
+**/.snakemake
+**/.cache
+**/.config
+**/.java
+smk-logs
+**/.out
+smk-logs/*
+inputs/test_train.tsv
+inputs/test_validate.tsv
+config/test_train.yaml
+config/test_validate.yaml
+config/*.yaml
+!config/*default.yaml
+!Default_launch_SMK.sh
+**/.bam
