@@ -23,7 +23,7 @@ library(tidyverse)
 
 process_multiqc_fastqc = function(multiqc_fastqc_input){
   as_tibble(read.table(multiqc_fastqc_input, header = TRUE, sep = '\t', stringsAsFactors = FALSE)) %>%
-  mutate(library = substr(Filename,1,6)) %>%
+  mutate(library = sub("_(processed.*|raw_.*|unpaired.*)$","",Sample)) %>%
   mutate(read = ifelse(grepl("R1", Filename), "read1", "read2")) %>%
   mutate(fastq_processing = gsub("_.*$","",substr(Sample, 8, length(Sample)))) %>%
   select(!c(Sample,File.type,Encoding)) %>%
@@ -33,13 +33,6 @@ process_multiqc_fastqc = function(multiqc_fastqc_input){
 }
 
 fastqc = process_multiqc_fastqc(fastqc_input)
-  as_tibble(read.table(fastqc_input, header = TRUE, sep = '\t', stringsAsFactors = FALSE)) %>%
-  mutate(library = substr(Sample, 1, 6)) %>%
-  mutate(bam_processing = gsub("_.*$","",substr(Sample, 8, length(Sample)))) %>%
-  select(!c(Sample)) %>%
-  pivot_wider(
-    names_from = c(bam_processing),
-    values_from = !c(library, bam_processing))
 
 process_multiqc_samfile = function(multiqc_samfile){
   read_tsv(multiqc_samfile) %>% mutate(library = substr(Sample, 1, 6)) %>%

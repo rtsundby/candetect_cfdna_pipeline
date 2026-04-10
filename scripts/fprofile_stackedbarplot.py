@@ -30,11 +30,13 @@ def preprocess_metadata(df, metadata_file):
     """Preprocess metadata to match and order samples."""
     metadata = pd.read_csv(metadata_file, sep="\t")
     
-    # Rename 'sample' to 'library' to maintain consistent logic
-    metadata["library_motifs"] = metadata["sample"] + "_motifs"
-    
+    # Support either 'library' or 'sample' as the sample identifier column
+    id_col = "library" if "library" in metadata.columns else "sample"
+    metadata["library_motifs"] = metadata[id_col] + "_motifs"
+
     # Ensure metadata sample names match with input file columns
-    sample_order = metadata.sort_values(by=["cohort", "cycle", "sample"])["library_motifs"]
+    sort_cols = [c for c in ["cohort", "cycle", id_col] if c in metadata.columns]
+    sample_order = metadata.sort_values(by=sort_cols)["library_motifs"]
     
     # Filter input data to match ordered sample names
     df = df[sample_order]

@@ -74,6 +74,11 @@ if EXISTING_MODEL and os.path.exists(EXISTING_MODEL):
     print(f"Loading existing model from {EXISTING_MODEL}")
     with open(EXISTING_MODEL, 'rb') as f:
         best_clf = pickle.load(f)
+    model_output_file = f'{models_dir}/{name}.pkl'
+    #Save the loaded model to the output directory for consistency, even if its the same as the existing model
+    with open(model_output_file, 'wb') as f:
+        pickle.dump(best_clf,f)
+    print(f"Save the pre-trained model and saved: {model_output_file}")
 else:
     # Handle case when existing_model is empty or doesn't exist
     print("\n\n---------------- No Existing Model Found ----------------\n")

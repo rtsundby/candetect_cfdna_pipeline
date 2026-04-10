@@ -4,6 +4,8 @@
 #                                                                              #
 #########1#########2#########3#########4#########5#########6#########7#########8
 
+import os
+import itertools as it
 import pandas as pd
 import re
 import numpy as np
@@ -54,27 +56,36 @@ frag_libs_file_indict = frag_libs["file"].tolist()
 frag_lib_dict = dict(zip(FRAG_LIBS, frag_libs_file_indict))
 
 # Make  a list of healthy libraries
-FRAG_HEALTHY_LIBRARIES = frag_libs[frag_libs['cohort'] == 'healthy']['library'].tolist()
+FRAG_HEALTHY_LIBRARIES = frag_libs[frag_libs['cohort'] == normal_control]['library'].tolist()
 
-rule all:
-  input: 
-#bam_to_motif
-    expand(motif_dir + "/{library}_motifs.tsv",
-        library = frag_libs["library"]),
-#motif_merge
+# Mode 3: apply existing model + use original fprofile_AUC.csv (no new ROC/AUC)
+APPLY_MOTIF_CUTPOINTS = config.get("existing_motif_scores_dir", "no") != "no"
+
+# Shared outputs (all modes)
+_motif_base_outputs = [
+    expand(motif_dir + "/{library}_motifs.tsv", library=frag_libs["library"]),
     data_dir + "/analysis/cfdna_wgs/features/combined_motif_counts_matrix.tsv",
     data_dir + "/analysis/cfdna_wgs/features/combined_motif_fractions_matrix.tsv",
-#mds
     data_dir + "/analysis/cfdna_wgs/features/mds.RData",
     data_dir + "/analysis/cfdna_wgs/features/motif_diversity_scores.csv",
-#fprofile
     data_dir + "/analysis/cfdna_wgs/features/fprofiles.tsv",
     data_dir + "/analysis/cfdna_wgs/features/motif_per_fprofile.tsv",
-#fprofile plot
     data_dir + "/analysis/cfdna_wgs/features/fprofiles.pdf",
-#fprofile_roc_plots:
-    data_dir + "/analysis/cfdna_wgs/features/fprofile_ROC.pdf",
     data_dir + "/analysis/cfdna_wgs/features/fprofile_AUC.csv",
+]
+# Mode 3: fprofile_AUC.csv copied from existing dir; no ROC plot
+if APPLY_MOTIF_CUTPOINTS:
+    _motif_analysis_outputs = []
+# Modes 1/2: compute full ROC + AUC
+else:
+    _motif_analysis_outputs = [
+        data_dir + "/analysis/cfdna_wgs/features/fprofile_ROC.pdf",
+    ]
+
+rule all:
+  input:
+    _motif_base_outputs,
+    _motif_analysis_outputs,
 rule bam_to_motif:
     input: frag_bams + "/{library}_filt.bam",
     log: logdir + "/motifs/bam_to_motif/{library}_bam_to_motif.log",
@@ -206,26 +217,49 @@ rule f_profile_plot:
         --output_file {output} --title "{params.plot_title}" --colormap {params.colorscheme} \
         > {log} 2>&1
 	    """      
-rule fprofile_roc_plots:
-    input: data_dir + "/analysis/cfdna_wgs/features/fprofiles.tsv",
-    log: logdir + "motifs/roc_plots/roc_f-profiles.log",
-    output:  
-        plot_out = data_dir + "/analysis/cfdna_wgs/features/fprofile_ROC.pdf",
-        csv_out = data_dir + "/analysis/cfdna_wgs/features/fprofile_AUC.csv",
-    params:
-        libraries_tsv = config["samples"],
-        script = frag_scriptdir + "/motif_ROC_plot.R",
-        out_dir = data_dir + "/analysis/cfdna_wgs/features",
-        log_dir = logdir + "/motifs/roc_plots",
-    shell:
-        """
-        mkdir -p {params.log_dir}
-        mkdir -p {params.out_dir} 
-        module load R
-        Rscript {params.script} \
-        {input} \
-        {params.libraries_tsv} \
-        {output.plot_out} \
-        {output.csv_out} \
-        &> {log}
-        """
+# Modes 1/2: compute ROC and AUC from new samples
+if not APPLY_MOTIF_CUTPOINTS:
+    rule fprofile_roc_plots:
+        input: data_dir + "/analysis/cfdna_wgs/features/fprofiles.tsv",
+        log: logdir + "/motifs/roc_plots/roc_f-profiles.log",
+        output:
+            plot_out = data_dir + "/analysis/cfdna_wgs/features/fprofile_ROC.pdf",
+            csv_out  = data_dir + "/analysis/cfdna_wgs/features/fprofile_AUC.csv",
+        params:
+            libraries_tsv = config["samples"],
+            script = frag_scriptdir + "/motif_ROC_plot.R",
+            out_dir = data_dir + "/analysis/cfdna_wgs/features",
+            log_dir = logdir + "/motifs/roc_plots",
+        shell:
+            """
+            mkdir -p {params.log_dir}
+            mkdir -p {params.out_dir}
+            module load R
+            Rscript {params.script} \
+            {input} \
+            {params.libraries_tsv} \
+            {output.plot_out} \
+            {output.csv_out} \
+            &> {log}
+            """
+
+# Mode 3: copy fprofile_AUC.csv from original run; no new ROC plot
+else:
+    rule motif_use_existing_auc:
+        output:
+            fprofile_auc = data_dir + "/analysis/cfdna_wgs/features/fprofile_AUC.csv",
+        log:
+            logdir + "/motifs/use_existing_auc.log"
+        params:
+            existing_auc = os.path.join(config.get("existing_motif_scores_dir", ""), "fprofile_AUC.csv"),
+            out_dir = data_dir + "/analysis/cfdna_wgs/features",
+        shell:
+            """
+            mkdir -p {params.out_dir}
+            if [ ! -f "{params.existing_auc}" ]; then
+                echo "ERROR: fprofile_AUC.csv not found at {params.existing_auc}" | tee {log}
+                exit 1
+            fi
+            cp {params.existing_auc} {output.fprofile_auc}
+            echo "Copied existing fprofile_AUC.csv from {params.existing_auc}" | tee {log}
+            """

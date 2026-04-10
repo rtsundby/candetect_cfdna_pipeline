@@ -38,17 +38,21 @@ logdir              = data_dir + "/logs/NMF_size"
 qcdir               = data_dir + "/qc"
 
 # NMF specific inputs
+min_components      = config["min_nmf_components"]
 max_components      = config["max_nmf_components"]
-nc                  = range(2,config["max_nmf_components"]+1)
+nc                  = range(config["min_nmf_components"],config["max_nmf_components"]+1)
+
+# Mode 3: apply existing model + existing cutpoints (no new AUC)
+APPLY_NMF_CUTPOINTS = config.get("existing_nmf_scores_dir", "no") != "no"
 
 # NMF specific directories
 nmf_dir             =  frag + "/nmf"
 
 nmf_agg_hist_dir    = nmf_dir + "/agg"
-nmf_comps           = [f"{nmf_dir}/model/{c1}_vs_{c2}.n={{nc}}.pkl" for (c1,c2) in it.combinations(COHORTS,2)]
-nmf_probs           = [f"{nmf_dir}/probs/{c1}_vs_{c2}.n={{nc}}.csv" for (c1,c2) in it.combinations(COHORTS,2)]
+nmf_comps           = [f"{nmf_dir}/model/{c1}_v_{c2}.n={{nc}}.pkl" for (c1,c2) in it.combinations(COHORTS,2)]
+nmf_probs           = [f"{nmf_dir}/probs/{c1}_v_{c2}.n={{nc}}.csv" for (c1,c2) in it.combinations(COHORTS,2)]
 nmf_raw_hist_dir    = nmf_dir + "/raw"
-nmf_scores          = [f"{nmf_dir}/scores/{c1}_vs_{c2}.n={{nc}}.csv" for (c1,c2) in it.combinations(COHORTS,2)]
+nmf_scores          = [f"{nmf_dir}/scores/{c1}_v_{c2}.n={{nc}}.csv" for (c1,c2) in it.combinations(COHORTS,2)]
 
 ####------ Read samples ------####
 frag_libs = pd.read_table(config["samples"])
@@ -80,6 +84,21 @@ pairs = list(it.combinations(COHORTS, 2))
 print(pairs)
 print([pair[0] for pair in pairs])
 
+# Mode 3: determine best n_components per cohort pair from the original run at parse time
+if APPLY_NMF_CUTPOINTS:
+    _existing_nmf_dir = config["existing_nmf_scores_dir"]
+    _best_aucs_path = os.path.join(_existing_nmf_dir, "aucs", "best_med_aucs.csv")
+    if not os.path.exists(_best_aucs_path):
+        raise ValueError(
+            f"Mode 3 (existing_nmf_scores_dir set) requires best_med_aucs.csv but not found: {_best_aucs_path}"
+        )
+    _best_aucs_df = pd.read_csv(_best_aucs_path)
+    BEST_NC = {(row["cohort1"], row["cohort2"]): int(row["n_components"])
+               for _, row in _best_aucs_df.iterrows()}
+    BEST_NMF_FNAMES = [f"{c1}_v_{c2}" for c1, c2 in pairs]
+    BEST_NMF_NC    = [BEST_NC.get((c1, c2), min_components) for c1, c2 in pairs]
+    print(f"Mode 3 NMF — best n_components per pair: {dict(zip(BEST_NMF_FNAMES, BEST_NMF_NC))}")
+
 #for c1, c2 in it.combinations(COHORTS, 2):
 #    pairs.append((c1, c2))
 #    print(f"{c1} vs {c2}") 
@@ -101,29 +120,40 @@ def get_cohort_pairs():
 #        pairs.append((c1, c2))
 #    return pairs
 
-rule all:
-    input:
-        # Raw histograms
-        expand(nmf_raw_hist_dir + "/{lib}_metrics.txt", lib=FRAG_LIBS),
-        expand(nmf_raw_hist_dir + "/{lib}_histogram.pdf", lib=FRAG_LIBS),
-        # Aggregated histograms
-        nmf_agg_hist_dir + "/count_histogram.csv",
-        nmf_agg_hist_dir + "/freq_histogram.30_700.csv",
-        # NMF outputs for each cohort pair and component number
-        expand(nmf_dir + "/probs/{fnames}.n={nc}.csv",
-            fnames = [f"{c1}_vs_{c2}" for c1,c2 in pairs], nc=range(2, config["max_nmf_components"] + 1)),
-        expand(nmf_dir + "/model/{fnames}.n={nc}.pkl",
-            fnames = [f"{c1}_vs_{c2}" for c1,c2 in pairs], nc=range(2, config["max_nmf_components"] + 1)),
-        expand(nmf_dir + "/coeffs/{fnames}.n={nc}.csv",
-            fnames = [f"{c1}_vs_{c2}" for c1,c2 in pairs], nc=range(2, config["max_nmf_components"] + 1)),
-        # NMF component plots
-        expand(nmf_dir + "/plots/components/{fnames}.n={nc}.pdf",
-            fnames = [f"{c1}_vs_{c2}" for c1,c2 in pairs], nc=range(2, config["max_nmf_components"] + 1)),
-        #nmf aucs
+# Shared histogram outputs (all modes)
+_nmf_hist_outputs = [
+    expand(nmf_raw_hist_dir + "/{lib}_metrics.txt", lib=FRAG_LIBS),
+    expand(nmf_raw_hist_dir + "/{lib}_histogram.pdf", lib=FRAG_LIBS),
+    nmf_agg_hist_dir + "/count_histogram.csv",
+    nmf_agg_hist_dir + "/freq_histogram.30_700.csv",
+]
+
+# Mode 3: only best n_components per cohort pair, scores via cutpoint application
+if APPLY_NMF_CUTPOINTS:
+    _nmf_analysis_outputs = [
+        expand(nmf_dir + "/probs/{fnames}.n={nc}.csv",  zip, fnames=BEST_NMF_FNAMES, nc=BEST_NMF_NC),
+        expand(nmf_dir + "/model/{fnames}.n={nc}.pkl",  zip, fnames=BEST_NMF_FNAMES, nc=BEST_NMF_NC),
+        expand(nmf_dir + "/coeffs/{fnames}.n={nc}.csv", zip, fnames=BEST_NMF_FNAMES, nc=BEST_NMF_NC),
+        expand(nmf_dir + "/scores/{fnames}.n={nc}.csv", zip, fnames=BEST_NMF_FNAMES, nc=BEST_NMF_NC),
+    ]
+# Modes 1/2: full component sweep + AUC + plots
+else:
+    _all_fnames = [f"{c1}_v_{c2}" for c1, c2 in pairs]
+    _all_nc     = range(min_components, max_components + 1)
+    _nmf_analysis_outputs = [
+        expand(nmf_dir + "/probs/{fnames}.n={nc}.csv",           fnames=_all_fnames, nc=_all_nc),
+        expand(nmf_dir + "/model/{fnames}.n={nc}.pkl",           fnames=_all_fnames, nc=_all_nc),
+        expand(nmf_dir + "/coeffs/{fnames}.n={nc}.csv",          fnames=_all_fnames, nc=_all_nc),
+        expand(nmf_dir + "/plots/components/{fnames}.n={nc}.pdf", fnames=_all_fnames, nc=_all_nc),
         nmf_dir + "/aucs/aucs.csv",
         nmf_dir + "/aucs/best_med_aucs.csv",
-        expand(nmf_scores,
-                nc = range(2,max_components+1))        
+        expand(nmf_scores, nc=_all_nc),
+    ]
+
+rule all:
+    input:
+        _nmf_hist_outputs,
+        _nmf_analysis_outputs,
 
 rule raw_histograms:
     resources:
@@ -213,77 +243,114 @@ rule nmf:
             --freq_csv {input.freq_csv} \
             --samplelist {params.samplelist} \
             --n_components {wildcards.nc} \
-            --cohort1 $(echo "{wildcards.fnames}" | sed 's/_vs_.*//') \
-            --cohort2 $(echo "{wildcards.fnames}" | sed 's/.*_vs_//') \
+            --cohort1 $(echo "{wildcards.fnames}" | sed 's/_v_.*//') \
+            --cohort2 $(echo "{wildcards.fnames}" | sed 's/.*_v_//') \
             --out_dir {params.out_dir} \
             --existing_model {params.existing_model} \
             --name {wildcards.fnames}.n={wildcards.nc} \
             &> {log}
         """
-rule nmf_aucs:
-    resources:
-        time="0:25:00",
-    input:
-        expand(nmf_probs,
-                nc = range(2,max_components+1)
-        ),
-        samplelist = samples,
-    output:
-        nmf_dir + "/aucs/aucs.csv",
-        nmf_dir + "/aucs/best_med_aucs.csv",
-        expand(nmf_scores,
-                nc = range(2,max_components+1)
-        ),
-    log:
-        logdir + "/nmf/auc/aucs.log"
-    params:
-        out_dir = nmf_dir,
-        log_dir = logdir + "/nmf/auc",
-        script  = frag_scriptdir + "/nmf_aucs.py",
-        probs_dir = nmf_dir + "/probs",
-        max_components = max_components,
-        cohorts = ",".join(config["cohorts"]),
-    shell:
-        """
-        mkdir -p {params.out_dir}
-        mkdir -p {params.log_dir}
+# Modes 1/2: compute AUC across all component numbers + component plots
+if not APPLY_NMF_CUTPOINTS:
+    rule nmf_aucs:
+        resources:
+            time="0:25:00",
+        input:
+            expand(nmf_probs,
+                    nc = range(min_components,max_components+1)
+            ),
+            samplelist = samples,
+        output:
+            nmf_dir + "/aucs/aucs.csv",
+            nmf_dir + "/aucs/best_med_aucs.csv",
+            expand(nmf_scores,
+                    nc = range(min_components,max_components+1)
+            ),
+        log:
+            logdir + "/nmf/auc/aucs.log"
+        params:
+            out_dir = nmf_dir,
+            log_dir = logdir + "/nmf/auc",
+            script  = frag_scriptdir + "/nmf_aucs.py",
+            probs_dir = nmf_dir + "/probs",
+            min_components = min_components,
+            max_components = max_components,
+            cohorts = ",".join(config["cohorts"]),
+        shell:
+            """
+            mkdir -p {params.out_dir}
+            mkdir -p {params.log_dir}
 
-        python3 {params.script} \
-        --probs_dir {params.probs_dir} \
-        --max_components {params.max_components} \
-        --samplelist {input.samplelist} \
-        --out_dir {params.out_dir} \
-        --cohorts {params.cohorts} \
-        &> {log}
-        """
-
-rule plot_nmf_components:
-    resources:
-        time="0:30:00",
-        mem_gb="16g",
-        cpus="8",
-    input:
-        model = nmf_dir + "/model/{fnames}.n={nc}.pkl",
-        freq_csv = nmf_agg_hist_dir + "/freq_histogram.30_700.csv",
-    output:
-        plot = nmf_dir + "/plots/components/{fnames}.n={nc}.pdf",
-    log:
-        logdir + "/nmf/plots/components/{fnames}.n={nc}.log"
-    params:
-        out_dir = nmf_dir + "/plots/components",
-        log_dir = logdir + "/nmf/plots/components",
-        script = frag_scriptdir + "/plot_nmf_components.py",
-    shell:
-        """
-        mkdir -p {params.out_dir}
-        mkdir -p {params.log_dir}
-
-        python3 {params.script} \
-            --model {input.model} \
-            --freq_csv {input.freq_csv} \
-            --output {output.plot} \
-            --cohort1 $(echo "{wildcards.fnames}" | sed 's/_vs_.*//') \
-            --cohort2 $(echo "{wildcards.fnames}" | sed 's/.*_vs_//') \
-            --n_components {wildcards.nc} \
+            python3 {params.script} \
+            --probs_dir {params.probs_dir} \
+            --min_components {params.min_components} \
+            --max_components {params.max_components} \
+            --samplelist {input.samplelist} \
+            --out_dir {params.out_dir} \
+            --cohorts {params.cohorts} \
             &> {log}
-        """
+            """
+
+    rule plot_nmf_components:
+        resources:
+            time="0:30:00",
+            mem_gb="16g",
+            cpus="8",
+        input:
+            model = nmf_dir + "/model/{fnames}.n={nc}.pkl",
+            freq_csv = nmf_agg_hist_dir + "/freq_histogram.30_700.csv",
+        output:
+            plot = nmf_dir + "/plots/components/{fnames}.n={nc}.pdf",
+        log:
+            logdir + "/nmf/plots/components/{fnames}.n={nc}.log"
+        params:
+            out_dir = nmf_dir + "/plots/components",
+            log_dir = logdir + "/nmf/plots/components",
+            script = frag_scriptdir + "/plot_nmf_components.py",
+        shell:
+            """
+            mkdir -p {params.out_dir}
+            mkdir -p {params.log_dir}
+
+            python3 {params.script} \
+                --model {input.model} \
+                --freq_csv {input.freq_csv} \
+                --output {output.plot} \
+                --cohort1 $(echo "{wildcards.fnames}" | sed 's/_v_.*//') \
+                --cohort2 $(echo "{wildcards.fnames}" | sed 's/.*_v_//') \
+                --n_components {wildcards.nc} \
+                &> {log}
+            """
+
+# Mode 3: apply existing cutpoints to best n_components probs, no new AUC
+else:
+    rule nmf_apply_cutpoints:
+        resources:
+            time="0:30:00",
+            mem_mb="16000",
+            cpus="4",
+        input:
+            probs = nmf_dir + "/probs/{fnames}.n={nc}.csv",
+        output:
+            scores = nmf_dir + "/scores/{fnames}.n={nc}.csv",
+        log:
+            logdir + "/nmf/apply_cutpoints/{fnames}.n={nc}.log"
+        params:
+            existing_nmf_dir = config.get("existing_nmf_scores_dir", "no"),
+            script = frag_scriptdir + "/apply_cutpoints.py",
+            samplelist = samples,
+            log_dir = logdir + "/nmf/apply_cutpoints",
+        shell:
+            """
+            mkdir -p {params.log_dir}
+            mkdir -p $(dirname {output.scores})
+
+            python3 {params.script} \
+            --probs_csv {input.probs} \
+            --scores_csv {params.existing_nmf_dir}/scores/{wildcards.fnames}.n={wildcards.nc}.csv \
+            --samplelist {params.samplelist} \
+            --cohort1 $(echo "{wildcards.fnames}" | sed 's/_v_.*//') \
+            --cohort2 $(echo "{wildcards.fnames}" | sed 's/.*_v_//') \
+            --out_csv {output.scores} \
+            &> {log}
+            """

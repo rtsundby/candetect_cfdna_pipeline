@@ -36,7 +36,7 @@ missing_columns = [col for col in required_columns if col not in dx_df.columns]
 if missing_columns:
     raise ValueError(f"Missing required columns in samplelist file: {missing_columns}")
 dx_df = dx_df[required_columns]
-dx_df = dx_df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
+dx_df = dx_df.apply(lambda col: col.map(lambda x: x.strip() if isinstance(x, str) else x))
 print("dx_df:")
 print(dx_df.head())
 

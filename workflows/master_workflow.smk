@@ -1,8 +1,9 @@
 #########1#########2#########3#########4#########5#########6#########7#########8
 #                                                                              #
-#     Master workflor for pre-processing and analysis of cfDNA WGS:            #
-# Will run pre-processing first (frag_reads.smk) first. If completed w/o error #
-#           Will then run end_motifs, binwise, NMF_size in parallel              #
+#        Master workflow for pre-processing and analysis of cfDNA WGS:         #
+#  1. Runs frag_reads.smk (pre-processing) first                               #
+#  2. Runs end_motifs, binwise_frags, and NMF_size in parallel                 #
+#  3. Runs combine_datasets.smk after all three parallel workflows complete     #
 #                                                                              #
 #########1#########2#########3#########4#########5#########6#########7#########8
 
@@ -11,7 +12,8 @@ rule all:
         "frag_reads.done",
         "end_motifs.done",
         "binwise.done",
-        "NMF_size.done"
+        "NMF_size.done",
+        "combine_datasets.done"
 
 # Rule to run frag_reads.smk
 rule run_frag_reads:
@@ -55,8 +57,22 @@ rule run_NMF_size:
     output:
         "NMF_size.done"
     params:
-        configfile="{configfile}"  
+        configfile="{configfile}"
     shell:
         """
         snakemake -s NMF_size.smk --nolock --configfile {params.configfile} --profile profile/ && touch {output}
+        """
+
+rule run_combine_datasets:
+    input:
+        "end_motifs.done",
+        "binwise.done",
+        "NMF_size.done"
+    output:
+        "combine_datasets.done"
+    params:
+        configfile="{configfile}"
+    shell:
+        """
+        snakemake -s combine_datasets.smk --nolock --configfile {params.configfile} --profile profile/ && touch {output}
         """

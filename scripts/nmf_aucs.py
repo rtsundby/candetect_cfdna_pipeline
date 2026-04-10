@@ -9,6 +9,7 @@ import seaborn as sns
 
 parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
 parser.add_argument("--probs_dir", help='Path to end motifs probs dir (input)', required=True)
+parser.add_argument("--min_components", help='Minimum number of components', type=int, required=True)
 parser.add_argument("--max_components", help='Maximum number of components', type=int, required=True)
 parser.add_argument("--samplelist", help='Path to samplelist (input)', required=True)
 parser.add_argument("--out_dir", help='Path to output directory', required=True)
@@ -20,6 +21,7 @@ for k,v in sorted(vars(args).items()):
     print(f"\t{k}: {v}")
 
 PROBS_DIR = args.probs_dir
+MIN_COMPONENTS = args.min_components
 MAX_COMPONENTS = args.max_components
 SAMPLELIST = args.samplelist
 OUT_DIR = args.out_dir
@@ -37,7 +39,7 @@ missing_columns = [col for col in required_columns if col not in dx_df.columns]
 if missing_columns:
     raise ValueError(f"Missing required columns in samplelist file: {missing_columns}")
 dx_df = dx_df[required_columns]
-dx_df = dx_df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
+dx_df = dx_df.apply(lambda col: col.map(lambda x: x.strip() if isinstance(x, str) else x))
 print("dx_df:")
 print(dx_df.head())
 
@@ -69,9 +71,9 @@ rows = []
 for c1, c2 in it.combinations(COHORTS, 2):
     best_med_auc = None
     best_row = None
-    for n_comp in range(2,MAX_COMPONENTS+1):
+    for n_comp in range(MIN_COMPONENTS,MAX_COMPONENTS+1):
         print("c1:", c1, "c2:", c2)
-        name = f"{c1}_vs_{c2}.n={n_comp}"
+        name = f"{c1}_v_{c2}.n={n_comp}"
         row = [c1, c2, n_comp]
         
         # get scores df
@@ -132,7 +134,7 @@ aucs.plot_aucs_heatmap(df,aucs_plots_dir,"med_score")
 # Plot AUCs per n-component individually
 for c1, c2 in it.combinations(COHORTS, 2):
     print("c1:", c1, "c2:", c2)
-    name = f"{c1}_vs_{c2}"
+    name = f"{c1}_v_{c2}"
     df = aucs_df.loc[(aucs_df["cohort1"] == c1) & (aucs_df["cohort2"] == c2)]
     df = pd.melt(df, id_vars=["n_components"], value_vars=df.columns[-12:])
     df = df.rename(columns={"variable":"repeat","value":"auc"})

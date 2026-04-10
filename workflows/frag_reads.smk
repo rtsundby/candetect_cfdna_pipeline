@@ -66,7 +66,7 @@ print("Available library names:", FRAG_LIBS)
 print("Library dictionary keys:", list(frag_lib_dict.keys()))
 
 # Make  a list of healthy libraries
-FRAG_HEALTHY_LIBRARIES = frag_libs[frag_libs['cohort'] == 'healthy']['library'].tolist()
+FRAG_HEALTHY_LIBRARIES = frag_libs[frag_libs['cohort'] == normal_control]['library'].tolist()
 
 rule all:
   input: 
@@ -543,18 +543,24 @@ checkpoint frag_make_qc_tsv:
         mqflag = qcdir + "/frag_multiqc_data/multiqc_samtools_flagstat.txt",
         picard = qcdir + "/frag_multiqc_data/multiqc_picard_wgsmetrics.txt",
         deeptools_frag = qcdir + "/deeptools_frag_lengths.txt",
-        deeptools_cov = qcdir + "/frag_coverage.tsv",
+        deeptools_cov = expand(qcdir + "/{library}_coverage.tsv", library = FRAG_LIBS)
     log: logdir + "/make_qc_tsv/make_qc_tsv.log",
     output:
         readqc = qcdir + "/frag_read_qc.tsv",
         fraglen = qcdir + "/frag_frag_len.tsv",
+        deeptools_cov = qcdir +"/frag_coverage.tsv",
     params:
         script = frag_scriptdir+ "/make_qc_tsv.R",
+        script_cov = frag_scriptdir + "/combine_deeptool_coverage.R",
         log_dir = logdir + "/make_qc_tsv",
     shell:
         """
         mkdir -p {params.log_dir}
+        mkdir -p {qcdir}/summary
         module load R
+
+        Rscript {params.script_cov} --out {output.deeptools_cov} {input.deeptools_cov}
+
         Rscript {params.script} \
         {input.fq} \
         {input.mqsam} \

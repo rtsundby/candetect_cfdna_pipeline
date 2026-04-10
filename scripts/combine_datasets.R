@@ -167,15 +167,9 @@ if (!is.null(opt$nmf) && file.exists(opt$nmf)) {
   
   log_message(glue("Best number of components for {opt$cohort1} vs {opt$cohort2}: {best_n_components}"))
   
-  nmf_scores_pattern <- file.path(
-    opt$data_dir,
-    "analysis/cfdna_wgs/nmf/scores",
-    glue("{opt$cohort1}_vs_{opt$cohort2}.n={best_n_components}.csv")
-  )
-  
   nmf_scores_files <- list.files(
-    path = dirname(nmf_scores_pattern),
-    pattern = basename(nmf_scores_pattern),
+    path = file.path(opt$data_dir, "analysis/cfdna_wgs/nmf/scores"),
+    pattern = glue("{opt$cohort1}_(v|vs)_{opt$cohort2}\\.n={best_n_components}\\.csv"),
     full.names = TRUE
   )
   

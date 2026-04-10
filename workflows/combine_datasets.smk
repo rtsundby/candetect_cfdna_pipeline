@@ -4,6 +4,9 @@
 #                                                                              #
 #########1#########2#########3#########4#########5#########6#########7#########8
 
+import os
+import itertools as it
+
 # Define directories
 data_dir = config["data_dir"]
 log_dir = data_dir + "/logs/combine_datasets"
@@ -18,7 +21,6 @@ for d in [log_dir, plot_dir]:
     os.makedirs(d, exist_ok=True)
 
 # Define cohort comparisons (one-versus-one)
-import itertools as it
 COHORT_1 = []
 COHORT_2 = []
 for c1, c2 in it.combinations(COHORTS,2):
@@ -118,7 +120,7 @@ rule plot_subject_trajectories:
             --output {output.plot} \
             --cohort1 {wildcards.c1} \
             --cohort2 {wildcards.c2} \
-            --normal_control {wildcards.c1} \
+            --normal_control {NORMAL_CONTROL} \
             --log {log} 2>&1 | tee -a {log}
         """
 
@@ -143,7 +145,7 @@ rule plot_auc_comparison:
             --output {output.plot} \
             --cohort1 {wildcards.c1} \
             --cohort2 {wildcards.c2} \
-            --normal_control {wildcards.c1} \
+            --normal_control {NORMAL_CONTROL} \
             --log {log} 2>&1 | tee -a {log}
         """
 
@@ -168,6 +170,6 @@ rule plot_metric_distributions:
             --output_dir {output} \
             --cohort1 {wildcards.c1} \
             --cohort2 {wildcards.c2} \
-            --normal_control {wildcards.c1} \
+            --normal_control {NORMAL_CONTROL} \
             --log {log} 2>&1 | tee -a {log}
         """
