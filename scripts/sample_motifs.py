@@ -12,7 +12,7 @@ Example usage:
 import argparse
 import itertools
 import os
-os.system('module load python samtools bedtools')
+#os.system('module load python samtools bedtools')
 import logging
 import sh
 from collections import Counter

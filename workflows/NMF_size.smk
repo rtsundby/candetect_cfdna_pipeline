@@ -10,6 +10,44 @@ import numpy as np
 import glob
 import os
 import itertools as it
+import yaml
+
+
+#######define software path in this part#########
+current_dir = os.getcwd()
+sys.path.append(f'{current_dir}/config')
+import program
+
+# -----------------------------
+# Path expansion for strings in config (~, $VARS)
+# -----------------------------
+def resolve_config_paths(config_dict):
+    for k, v in config_dict.items():
+        if isinstance(v, str):
+            config_dict[k] = os.path.expandvars(os.path.expanduser(v))
+        elif isinstance(v, dict):
+            resolve_config_paths(v)
+        elif isinstance(v, list):
+            config_dict[k] = [os.path.expandvars(os.path.expanduser(i)) if isinstance(i, str) else i for i in v]
+
+resolve_config_paths(config)
+
+print(config)
+
+
+#########################################################
+# READ CLUSTER PER-RULE REQUIREMENTS
+#########################################################
+CLUSTERYAML = os.path.join(current_dir,"config/cluster.yaml")
+with open(CLUSTERYAML) as json_file:
+    CLUSTER = yaml.safe_load(json_file)
+
+## Create lambda functions to allow a way to insert read-in values
+## as rule directives
+getthreads=lambda rname:int(CLUSTER[rname]["threads"]) if rname in CLUSTER and "threads" in CLUSTER[rname] else int(CLUSTER["__default__"]["threads"])
+getmemg=lambda rname:CLUSTER[rname]["mem"] if rname in CLUSTER and "mem" in CLUSTER[rname] else CLUSTER["__default__"]["mem"]
+getmemG=lambda rname:getmemg(rname).replace("g","G")
+
 
 # Values directly from configuration file
 bwa_dir             = config["ref_dir"]
@@ -27,6 +65,7 @@ PE2                 = config.get("PE2", "need to define PE2")
 refdir              = config["ref_dir"]
 samples             = config["samples"]
 threads             = config["threads"]
+ENV_FRAGENTOMICS    = config["env_fragentomics"]
 
 # Directory values derived from configuration YAML
 benchdir            = data_dir + "/benchmark"
@@ -133,7 +172,7 @@ if APPLY_NMF_CUTPOINTS:
     _nmf_analysis_outputs = [
         expand(nmf_dir + "/probs/{fnames}.n={nc}.csv",  zip, fnames=BEST_NMF_FNAMES, nc=BEST_NMF_NC),
         expand(nmf_dir + "/model/{fnames}.n={nc}.pkl",  zip, fnames=BEST_NMF_FNAMES, nc=BEST_NMF_NC),
-        expand(nmf_dir + "/coeffs/{fnames}.n={nc}.csv", zip, fnames=BEST_NMF_FNAMES, nc=BEST_NMF_NC),
+        #expand(nmf_dir + "/coeffs/{fnames}.n={nc}.csv", zip, fnames=BEST_NMF_FNAMES, nc=BEST_NMF_NC),
         expand(nmf_dir + "/scores/{fnames}.n={nc}.csv", zip, fnames=BEST_NMF_FNAMES, nc=BEST_NMF_NC),
     ]
 # Modes 1/2: full component sweep + AUC + plots
@@ -156,13 +195,13 @@ rule all:
         _nmf_analysis_outputs,
 
 rule raw_histograms:
-    resources:
-        time="5:00:00"
     input:
         bam = frag_bams + "/{lib}_filt.bam",
     output:
         metrics   = nmf_raw_hist_dir + "/{lib}_metrics.txt",
         histogram = nmf_raw_hist_dir + "/{lib}_histogram.pdf",
+    conda:
+        ENV_FRAGENTOMICS,
     log:
         logdir + "/nmf/raw_histograms/{lib}.log",
     params:
@@ -175,10 +214,10 @@ rule raw_histograms:
         mkdir -p {params.out_dir}
         mkdir -p {params.log_dir}
 
-        module load picard
-        module load R
+        #module load picard
+        #module load R
 
-        java -jar {params.picardpath} CollectInsertSizeMetrics \
+        picard CollectInsertSizeMetrics \
         -I {input.bam} \
         -O {output.metrics} \
         -H {output.histogram} \
@@ -186,16 +225,16 @@ rule raw_histograms:
         &> {log}
         """
 rule agg_histograms:
-    resources:
-        time="0:120:00"
     input:
         metrics = expand(nmf_raw_hist_dir + "/{lib}_metrics.txt", lib=FRAG_LIBS),
         plots = expand(nmf_raw_hist_dir + "/{lib}_histogram.pdf", lib=FRAG_LIBS)
     output:
         counts = nmf_agg_hist_dir + "/count_histogram.csv",
-        freqs = nmf_agg_hist_dir + "/freq_histogram.30_700.csv"
+        freqs = nmf_agg_hist_dir + "/freq_histogram.30_700.csv",
+    conda:
+        ENV_FRAGENTOMICS,
     log:
-        logdir + "/nmf/agg_histograms.log"
+        logdir + "/nmf/agg_histograms.log",
     params:
         hist_dir = nmf_raw_hist_dir,
         out_dir = nmf_agg_hist_dir,
@@ -205,56 +244,53 @@ rule agg_histograms:
         """
         mkdir -p {params.out_dir}
         mkdir -p {params.logs_dir}
-
+        #module load python/3.9
         python3 {params.script} \
         --hist_dir {params.hist_dir} \
         --output {params.out_dir} \
         --verbose \
         &> {log}
         """
-rule nmf:
-    resources:
-        time="0:30:00",
-        mem_gb="16g",
-        cpus="8",
-    input:
-        freq_csv = nmf_agg_hist_dir + "/freq_histogram.30_700.csv",
-        counts = nmf_agg_hist_dir + "/count_histogram.csv",
 
-        raw_metrics = expand(nmf_raw_hist_dir + "/{lib}_metrics.txt", lib=FRAG_LIBS),
-        raw_plots = expand(nmf_raw_hist_dir + "/{lib}_histogram.pdf", lib=FRAG_LIBS)
-    output:
-        probs = nmf_dir + "/probs/{fnames}.n={nc}.csv",
-        coeffs = nmf_dir + "/coeffs/{fnames}.n={nc}.csv",
-        model = nmf_dir + "/model/{fnames}.n={nc}.pkl"
-    log:
-        logdir + "/nmf/model/{fnames}.n={nc}.log"
-    params:
-        out_dir = nmf_dir,
-        log_dir = logdir + "/nmf/model",
-        script = frag_scriptdir + "/nmf_model.py",
-        samplelist = samples,
-        existing_model = config["existing_nmf_model"]
-    shell:
-        """
-        mkdir -p {params.out_dir}/{{model,probs,coeffs}} {params.log_dir}
-
-        python3 {params.script} \
-            --freq_csv {input.freq_csv} \
-            --samplelist {params.samplelist} \
-            --n_components {wildcards.nc} \
-            --cohort1 $(echo "{wildcards.fnames}" | sed 's/_v_.*//') \
-            --cohort2 $(echo "{wildcards.fnames}" | sed 's/.*_v_//') \
-            --out_dir {params.out_dir} \
-            --existing_model {params.existing_model} \
-            --name {wildcards.fnames}.n={wildcards.nc} \
-            &> {log}
-        """
 # Modes 1/2: compute AUC across all component numbers + component plots
 if not APPLY_NMF_CUTPOINTS:
+    rule nmf:
+        input:
+            freq_csv = nmf_agg_hist_dir + "/freq_histogram.30_700.csv",
+            counts = nmf_agg_hist_dir + "/count_histogram.csv",
+
+            raw_metrics = expand(nmf_raw_hist_dir + "/{lib}_metrics.txt", lib=FRAG_LIBS),
+            raw_plots = expand(nmf_raw_hist_dir + "/{lib}_histogram.pdf", lib=FRAG_LIBS)
+        output:
+            probs = nmf_dir + "/probs/{fnames}.n={nc}.csv",
+            coeffs = nmf_dir + "/coeffs/{fnames}.n={nc}.csv",
+            model = nmf_dir + "/model/{fnames}.n={nc}.pkl",
+        conda:
+            ENV_FRAGENTOMICS,
+        log:
+            logdir + "/nmf/model/{fnames}.n={nc}.log",
+        params:
+            out_dir = nmf_dir,
+            log_dir = logdir + "/nmf/model",
+            script = frag_scriptdir + "/nmf_model.py",
+            samplelist = samples,
+            existing_model = config["existing_nmf_model"]
+        shell:
+            """
+            mkdir -p {params.out_dir}/{{model,probs,coeffs}} {params.log_dir}
+            #module load python/3.9
+            python3 {params.script} \
+                --freq_csv {input.freq_csv} \
+                --samplelist {params.samplelist} \
+                --n_components {wildcards.nc} \
+                --cohort1 $(echo "{wildcards.fnames}" | sed 's/_v_.*//') \
+                --cohort2 $(echo "{wildcards.fnames}" | sed 's/.*_v_//') \
+                --out_dir {params.out_dir} \
+                --existing_model {params.existing_model} \
+                --name {wildcards.fnames}.n={wildcards.nc} \
+                &> {log}
+            """
     rule nmf_aucs:
-        resources:
-            time="0:25:00",
         input:
             expand(nmf_probs,
                     nc = range(min_components,max_components+1)
@@ -266,6 +302,8 @@ if not APPLY_NMF_CUTPOINTS:
             expand(nmf_scores,
                     nc = range(min_components,max_components+1)
             ),
+        conda:
+            ENV_FRAGENTOMICS,
         log:
             logdir + "/nmf/auc/aucs.log"
         params:
@@ -292,15 +330,13 @@ if not APPLY_NMF_CUTPOINTS:
             """
 
     rule plot_nmf_components:
-        resources:
-            time="0:30:00",
-            mem_gb="16g",
-            cpus="8",
         input:
             model = nmf_dir + "/model/{fnames}.n={nc}.pkl",
             freq_csv = nmf_agg_hist_dir + "/freq_histogram.30_700.csv",
         output:
             plot = nmf_dir + "/plots/components/{fnames}.n={nc}.pdf",
+        conda:
+            ENV_FRAGENTOMICS,
         log:
             logdir + "/nmf/plots/components/{fnames}.n={nc}.log"
         params:
@@ -324,15 +360,49 @@ if not APPLY_NMF_CUTPOINTS:
 
 # Mode 3: apply existing cutpoints to best n_components probs, no new AUC
 else:
+    rule nmf:
+        input:
+            freq_csv = nmf_agg_hist_dir + "/freq_histogram.30_700.csv",
+            counts = nmf_agg_hist_dir + "/count_histogram.csv",
+
+            raw_metrics = expand(nmf_raw_hist_dir + "/{lib}_metrics.txt", lib=FRAG_LIBS),
+            raw_plots = expand(nmf_raw_hist_dir + "/{lib}_histogram.pdf", lib=FRAG_LIBS)
+        output:
+            probs = nmf_dir + "/probs/{fnames}.n={nc}.csv",
+            #coeffs = nmf_dir + "/coeffs/{fnames}.n={nc}.csv",
+            model = nmf_dir + "/model/{fnames}.n={nc}.pkl",
+        conda:
+            ENV_FRAGENTOMICS,
+        log:
+            logdir + "/nmf/model/{fnames}.n={nc}.log",
+        params:
+            out_dir = nmf_dir,
+            log_dir = logdir + "/nmf/model",
+            script = frag_scriptdir + "/nmf_model_mod3.py",
+            samplelist = samples,
+            existing_model = config["existing_nmf_model"]
+        shell:
+            """
+            mkdir -p {params.out_dir}/{{model,probs,coeffs}} {params.log_dir}
+            #module load python/3.9
+            python3 {params.script} \
+                --freq_csv {input.freq_csv} \
+                --samplelist {params.samplelist} \
+                --n_components {wildcards.nc} \
+                --cohort1 $(echo "{wildcards.fnames}" | sed 's/_v_.*//') \
+                --cohort2 $(echo "{wildcards.fnames}" | sed 's/.*_v_//') \
+                --out_dir {params.out_dir} \
+                --existing_model {params.existing_model} \
+                --name {wildcards.fnames}.n={wildcards.nc} \
+                &> {log}
+            """
     rule nmf_apply_cutpoints:
-        resources:
-            time="0:30:00",
-            mem_mb="16000",
-            cpus="4",
         input:
             probs = nmf_dir + "/probs/{fnames}.n={nc}.csv",
         output:
             scores = nmf_dir + "/scores/{fnames}.n={nc}.csv",
+        conda:
+            ENV_FRAGENTOMICS,
         log:
             logdir + "/nmf/apply_cutpoints/{fnames}.n={nc}.log"
         params:

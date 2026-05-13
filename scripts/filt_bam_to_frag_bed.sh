@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-module load samtools
-module load bedtools
+#module load samtools
+#module load bedtools
 
 # Snakemake variables
 input_bam="$1"

@@ -69,6 +69,9 @@ def load_nmf_model(filepath):
     with open(filepath, 'rb') as f:
         model = pickle.load(f)
     logging.info(f"Model components loaded from {filepath}.")
+    print(type(model))
+    print(model)
+    #print(model.named_steps)
     return model['W'], model['F']
 
 def perform_nnls(F, sample_motif_frequencies):

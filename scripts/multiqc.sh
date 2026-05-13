@@ -6,10 +6,6 @@ input_files="$1"
 prefix="$2"         
 outdir="$3"         
 
-# Load required modules
-module purge
-module load multiqc
-
 # Create output directory if it doesn't exist
 mkdir -p "${outdir}"
 

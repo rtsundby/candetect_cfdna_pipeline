@@ -4,7 +4,7 @@ keep_bed=$2
 output=$3
 genome=$4
 
-module load bedtools
+#module load bedtools
 
 # Function to check file validity
 check_bed() {

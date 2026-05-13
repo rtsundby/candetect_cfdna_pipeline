@@ -8,8 +8,6 @@ raw_bam="${1}"
 dedup_bam="${2}"
 threads="${3}"
 
-module load samtools
-
 # Create temporary directory
 tmp_dir=$(mktemp -d -p $(dirname "$dedup_bam"))
 trap 'rm -rf "$tmp_dir"' EXIT

@@ -33,10 +33,11 @@ for k, v in sorted(vars(args).items()):
 
 # Load new sample probs and compute med_score
 probs_df = pd.read_csv(args.probs_csv, index_col=0)
-repeat_cols = [c for c in probs_df.columns if c.startswith("repeat_")]
-if not repeat_cols:
-    sys.exit(f"ERROR: No repeat_* columns found in {args.probs_csv}")
-probs_df["med_score"] = probs_df[repeat_cols].median(axis=1)
+#no repleat when using existing model and cutpoint
+#repeat_cols = [c for c in probs_df.columns if c.startswith("repeat_")]
+#if not repeat_cols:
+#    sys.exit(f"ERROR: No repeat_* columns found in {args.probs_csv}")
+#probs_df["med_score"] = probs_df[repeat_cols].median(axis=1)
 
 # Load cutpoint from the original run's scores file
 scores_df = pd.read_csv(args.scores_csv, index_col=0)
@@ -50,7 +51,8 @@ print(f"Applying cutpoint from original run: {cutoff:.6f}")
 
 # Apply cutpoint
 probs_df["med_score_cutoff"] = cutoff
-probs_df["med_score_pred_class"] = (probs_df["med_score"] >= cutoff).astype(int)
+#probs_df["med_score_pred_class"] = (probs_df["med_score"] >= cutoff).astype(int)
+probs_df["med_score_pred_class"] = (probs_df["score"] >= cutoff).astype(int)
 
 # Annotate with cohort info
 dx_df = pd.read_csv(args.samplelist, sep="\t", index_col=0)

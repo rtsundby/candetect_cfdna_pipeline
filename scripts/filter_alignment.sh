@@ -4,8 +4,6 @@ input=$1
 threads=$2
 output=$3
 
-module load samtools
-
 # Filter to reads that are
 #  - Excluding any unmapped, not primary alignment, or duplicates
 #  - Only MAPQ > 20

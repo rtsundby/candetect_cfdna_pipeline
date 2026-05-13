@@ -6,6 +6,44 @@ import pandas as pd
 import re
 import numpy as np
 import os
+import yaml
+
+
+#######define software path in this part#########
+current_dir = os.getcwd()
+
+
+# -----------------------------
+# Path expansion for strings in config (~, $VARS)
+# -----------------------------
+def resolve_config_paths(config_dict):
+    for k, v in config_dict.items():
+        if isinstance(v, str):
+            config_dict[k] = os.path.expandvars(os.path.expanduser(v))
+        elif isinstance(v, dict):
+            resolve_config_paths(v)
+        elif isinstance(v, list):
+            config_dict[k] = [os.path.expandvars(os.path.expanduser(i)) if isinstance(i, str) else i for i in v]
+
+resolve_config_paths(config)
+
+print(config)
+
+
+
+#########################################################
+# READ CLUSTER PER-RULE REQUIREMENTS
+#########################################################
+CLUSTERYAML = os.path.join(current_dir,"config/cluster.yaml")
+with open(CLUSTERYAML) as json_file:
+    CLUSTER = yaml.safe_load(json_file)
+
+## Create lambda functions to allow a way to insert read-in values
+## as rule directives
+getthreads=lambda rname:int(CLUSTER[rname]["threads"]) if rname in CLUSTER and "threads" in CLUSTER[rname] else int(CLUSTER["__default__"]["threads"])
+getmemg=lambda rname:CLUSTER[rname]["mem"] if rname in CLUSTER and "mem" in CLUSTER[rname] else CLUSTER["__default__"]["mem"]
+getmemG=lambda rname:getmemg(rname).replace("g","G")
+
 
 # Values directly from configuration file
 bwa_dir             = config["ref_dir"]
@@ -23,6 +61,7 @@ PE2                 = config.get("PE2", "need to define PE2")
 refdir              = config["ref_dir"]
 samples             = config["samples"]
 threads             = config["threads"]
+ENV_FRAG_READS      = config["env_frag_reads"]
 
 # Directory values derived from data_dir in configuration YAML
 bench_dir           = data_dir + "/benchmark"
@@ -32,9 +71,14 @@ frag_fastqs         = data_dir  + "/fastq"
 frag_scriptdir      = frag_repo +  "/scripts"
 logdir              = data_dir + "/logs/preprocessing"
 qcdir               = data_dir  + "/qc"
+tmpdir              = data_dir + "/tmp"
+print(frag_scriptdir)
+
+
 
 #Make sure logdir exists
 os.makedirs(logdir, exist_ok=True)
+os.makedirs(tmpdir, exist_ok=True)
 
 ####------ Read samples ------####
 frag_libs = pd.read_table(config["samples"])
@@ -77,8 +121,8 @@ rule all:
     expand(frag_fastqs + "/{library}_raw_"+ PE2 + ".fastq.gz",
             library = FRAG_LIBS,
     ),
-#frag_index
-    refdir + "/"+ fasta_base +".sa",
+####frag_index
+###   refdir + "/"+ fasta_base +".sa",
 #frag_fastp
     expand(frag_fastqs + "/{library}_processed_"+ PE1 + ".fastq.gz",
         library = FRAG_LIBS,
@@ -146,14 +190,11 @@ rule all:
     qcdir + "/frag_multiqc_data/multiqc_picard_wgsmetrics.txt",
     qcdir + "/frag_multiqc_data/multiqc_samtools_flagstat.txt",
 #frag_make_qc_tsv
-    qcdir + "/frag_read_qc.tsv",
-    qcdir + "/frag_frag_len.tsv",
+    qcdir + "/summary/frag_read_qc.tsv",
+    qcdir + "/summary/frag_frag_len.tsv",
+
 
 rule symlink_inputs:
-    resources:
-        time   = "00:10:00",
-        mem_gb = "16g",
-        cpus   = "2",
     input:
         lambda wildcards: frag_libs[frag_libs["library"] == wildcards.library]["file"],
     output:
@@ -218,20 +259,21 @@ rule symlink_inputs:
             echo "Symlink creation completed" >> {log.cmd}
             ls -l {output.read1} {output.read2} >> {log.cmd} 2>&1
         """)
-rule frag_index:
-    benchmark: bench_dir + "/frag_index_"+ fasta_base +".benchmark.txt",
-    input: genome_fasta,
-    log: logdir + "/reference_index/frag_index_"+ fasta_base +".log",
-    output: refdir + "/"+ fasta_base +".sa",
-    params:
-        out_prefix = refdir + "/" + fasta_base,
-        script = frag_scriptdir+ "/frag_index.sh",
-        log_dir = logdir + "/reference_index",
-    shell:
-        """
-        mkdir -p {params.log_dir}
-        {params.script} {input} {params.out_prefix} &> {log}
-        """
+#rule frag_index:
+#    benchmark: bench_dir + "/frag_index_"+ fasta_base +".benchmark.txt",
+#    input: genome_fasta,
+#    log: logdir + "/reference_index/frag_index_"+ fasta_base +".log",
+#    output: refdir + "/"+ fasta_base +".sa",
+#    params:
+#        out_prefix = refdir + "/" + fasta_base,
+#        script = frag_scriptdir+ "/frag_index.sh",
+#        log_dir = logdir + "/reference_index",
+#    shell:
+#        """
+#        mkdir -p {params.log_dir}
+#        {params.script} {input} {params.out_prefix} &> {log}
+#        """
+
 # Adapter-trim and QC reads with fastp
 rule frag_fastp:
     benchmark: bench_dir + "/{library}_frag_fastp.benchmark.txt",
@@ -250,16 +292,16 @@ rule frag_fastp:
         unpaired2 = frag_fastqs + "/{library}_unpaired_"+ PE2 + ".fastq.gz",
     params:
         script = frag_scriptdir+ "/fastp.sh",
-        threads = frag_threads,
+        threads = getthreads("frag_fastp"),
         tmp = config.get("tmp", "/tmp"),
         log_dir = logdir + "/fastp",
     resources:
-        mem_mb = 180000,
         tmpdir = config.get("tmp", "/tmp"),
+    conda:
+        ENV_FRAG_READS
     shell:
         """
         mkdir -p {params.log_dir}
-        module load fastp
         fastp --detect_adapter_for_pe \
             --disable_length_filtering \
             --failed_out {output.failed} \
@@ -287,11 +329,10 @@ rule frag_align:
         index = frag_bams + "/{library}_raw.bam.bai",
     params:
         script = frag_scriptdir+ "/align.sh",
-        threads = config["threads"],
+        threads = getthreads("frag_align"),
         log_dir = logdir + "/align",
-    resources:
-        mem_mb = 180000,
-        time = "72:00:00",
+    conda:
+        ENV_FRAG_READS
     shell:
         """
         mkdir -p {params.log_dir}
@@ -310,8 +351,10 @@ rule frag_dedup:
     output: frag_bams + "/{library}_dedup.bam",
     params:
         script = frag_scriptdir + "/dedup.sh",
-        threads = frag_threads,
+        threads = getthreads("frag_dedup"),
         log_dir = logdir + "/dedup",
+    conda:
+        ENV_FRAG_READS
     shell:
         """
         mkdir -p {params.log_dir}
@@ -320,6 +363,7 @@ rule frag_dedup:
         {output} \
         {params.threads} &> {log}
         """
+
 # Filter de-duplicated alignments.
 # Remove unmapped, not primary, and duplicate reads. Additional location filter by config bedfile variable.
 checkpoint frag_filter_alignment:
@@ -329,8 +373,10 @@ checkpoint frag_filter_alignment:
     output: frag_bams + "/{library}_filt.bam",
     params:
         script = frag_scriptdir+ "/filter_alignment.sh",
-        threads = frag_threads,
+        threads = getthreads("frag_filter_alignment"),
         log_dir = logdir + "/filter",
+    conda:
+        ENV_FRAG_READS
     shell:
         """
         mkdir -p {params.log_dir}
@@ -350,8 +396,10 @@ rule frag_fastqc:
     params:
         outdir = qcdir,
         script = frag_scriptdir+ "/fastqc.sh",
-        threads = frag_threads,
+        threads = getthreads("frag_fastqc"),
         log_dir = logdir + "/fastqc"
+    conda:
+        ENV_FRAG_READS
     shell:
         """
         mkdir -p {params.log_dir}
@@ -371,10 +419,10 @@ rule frag_alignment_qc:
         samstat = qcdir + "/{library}_{processing}_samstats.txt",
     params:
         script = frag_scriptdir+ "/alignment_qc.sh",
-        threads = frag_threads,
+        threads = getthreads("frag_alignment_qc"),
         log_dir = logdir + "/alignment_qc",
-    resources:
-        time="96:00:00",
+    conda:
+        ENV_FRAG_READS
     shell:
         """
         mkdir -p {params.log_dir}
@@ -394,11 +442,10 @@ rule frag_picard_depth:
     output: qcdir + "/{library}_picard_depth.txt",
     params:
         script = frag_scriptdir+ "/picard_depth.sh",
-        threads = frag_threads,
+        threads =  getthreads("frag_picard_depth"),
         log_dir = logdir + "/picard_depth",
-    resources:
-        mem_mb = 180000,
-        cpus = 40,
+    conda:
+        ENV_FRAG_READS
     shell:
         """
         mkdir -p {params.log_dir}
@@ -419,8 +466,10 @@ rule frag_bampefragsize:
     params:
         blacklist = config["blklist"],
         script = frag_scriptdir+ "/bampefragsize.sh",
-        threads = frag_threads,
+        threads = getthreads("frag_bampefragsize"),
         log_dir = logdir + "/bampefragsize",
+    conda:
+        ENV_FRAG_READS
     shell:
         """
         mkdir -p {params.log_dir}
@@ -442,10 +491,12 @@ rule frag_bamcoverage:
         bin = "10000",
         blacklist = config["blklist"],
         script = frag_scriptdir+ "/bamcoverage.sh",
-        threads = frag_threads,
+        threads = getthreads("frag_bamcoverage"),
         read_type = config.get("seq_params", {}).get("read_type", "PE"),
         read_length = config.get("seq_params", {}).get("read_length", 150),
         log_dir = logdir + "/bamcoverage",
+    conda:
+        ENV_FRAG_READS
     shell:
         """
         mkdir -p {params.log_dir}
@@ -461,8 +512,6 @@ rule frag_bamcoverage:
 # Make deepTools plotCoverage coverage maps for all filtered bams
 rule frag_plotcoverage:
     benchmark: bench_dir + "/{library}_frag_plotcoverage.benchmark.txt",
-    resources:
-        time="3:00:00"
     input: 
         frag_bams + "/{library}_filt.bam"
     log: logdir + "/plotcoverage/{library}_plotcoverage.log",
@@ -472,8 +521,10 @@ rule frag_plotcoverage:
     params:
         blacklist = config["blklist"],
         script = frag_scriptdir+ "/plotcoverage.sh",
-        threads = frag_threads,
+        threads = getthreads("frag_plotcoverage"),
         log_dir = logdir + "/plotcoverage",
+    conda:
+        ENV_FRAG_READS
     shell:
         """
         mkdir -p {params.log_dir}
@@ -487,8 +538,6 @@ rule frag_plotcoverage:
 # Aggregate QC files using MultiQC
 rule frag_multiqc:
     benchmark: bench_dir + "/frag_multiqc.benchmark.txt"
-    resources:
-        time="3:00:00"
     input:
         fastp = expand(logdir + "/fastp/{library}_frag_fastp.json", library=FRAG_LIBS),  
         fastqc = expand(qcdir + "/{library}_{processing}_{read}_fastqc.zip", 
@@ -523,6 +572,8 @@ rule frag_multiqc:
             *input.coverage
         ]),
         log_dir = logdir + "/multiqc",
+    conda:
+        ENV_FRAG_READS
     shell:
         """
         mkdir -p {qcdir}/frag_multiqc_data
@@ -546,18 +597,19 @@ checkpoint frag_make_qc_tsv:
         deeptools_cov = expand(qcdir + "/{library}_coverage.tsv", library = FRAG_LIBS)
     log: logdir + "/make_qc_tsv/make_qc_tsv.log",
     output:
-        readqc = qcdir + "/frag_read_qc.tsv",
-        fraglen = qcdir + "/frag_frag_len.tsv",
+        readqc = qcdir + "/summary/frag_read_qc.tsv",
+        fraglen = qcdir + "/summary/frag_frag_len.tsv",
         deeptools_cov = qcdir +"/frag_coverage.tsv",
     params:
         script = frag_scriptdir+ "/make_qc_tsv.R",
         script_cov = frag_scriptdir + "/combine_deeptool_coverage.R",
         log_dir = logdir + "/make_qc_tsv",
+    conda:
+        ENV_FRAG_READS
     shell:
         """
         mkdir -p {params.log_dir}
         mkdir -p {qcdir}/summary
-        module load R
 
         Rscript {params.script_cov} --out {output.deeptools_cov} {input.deeptools_cov}
 
@@ -567,7 +619,7 @@ checkpoint frag_make_qc_tsv:
         {input.mqflag} \
         {input.picard} \
         {input.deeptools_frag} \
-        {input.deeptools_cov} \
+        {output.deeptools_cov} \
         {output.readqc} \
         {output.fraglen} >& {log}
         """

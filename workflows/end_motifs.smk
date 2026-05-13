@@ -10,6 +10,46 @@ import pandas as pd
 import re
 import numpy as np
 
+import yaml
+
+
+#######define software path in this part#########
+current_dir = os.getcwd()
+sys.path.append(f'{current_dir}/config')
+import program
+
+# -----------------------------
+# Path expansion for strings in config (~, $VARS)
+# -----------------------------
+def resolve_config_paths(config_dict):
+    for k, v in config_dict.items():
+        if isinstance(v, str):
+            config_dict[k] = os.path.expandvars(os.path.expanduser(v))
+        elif isinstance(v, dict):
+            resolve_config_paths(v)
+        elif isinstance(v, list):
+            config_dict[k] = [os.path.expandvars(os.path.expanduser(i)) if isinstance(i, str) else i for i in v]
+
+resolve_config_paths(config)
+
+print(config)
+
+#########################################################
+# READ CLUSTER PER-RULE REQUIREMENTS
+#########################################################
+CLUSTERYAML = os.path.join(current_dir,"config/cluster.yaml")
+with open(CLUSTERYAML) as json_file:
+    CLUSTER = yaml.safe_load(json_file)
+
+## Create lambda functions to allow a way to insert read-in values
+## as rule directives
+getthreads=lambda rname:int(CLUSTER[rname]["threads"]) if rname in CLUSTER and "threads" in CLUSTER[rname] else int(CLUSTER["__default__"]["threads"])
+getmemg=lambda rname:CLUSTER[rname]["mem"] if rname in CLUSTER and "mem" in CLUSTER[rname] else CLUSTER["__default__"]["mem"]
+getmemG=lambda rname:getmemg(rname).replace("g","G")
+
+
+
+
 # Values directly from configuration file
 bwa_dir             = config["ref_dir"]
 COHORTS             = config["cohorts"]
@@ -26,7 +66,7 @@ PE2                 = config.get("PE2", "need to define PE2")
 refdir              = config["ref_dir"]
 samples             = config["samples"]
 threads             = config["threads"]
-
+ENV_FRAGENTOMICS    = config["env_fragentomics"]
 
 # Directory values derived from data_dir in configuration YAML
 benchdir            = data_dir + "/benchmark"
@@ -86,22 +126,26 @@ rule all:
   input:
     _motif_base_outputs,
     _motif_analysis_outputs,
+
 rule bam_to_motif:
     input: frag_bams + "/{library}_filt.bam",
     log: logdir + "/motifs/bam_to_motif/{library}_bam_to_motif.log",
     output: motif_dir + "/{library}_motifs.tsv",
+    conda:
+        ENV_FRAGENTOMICS,
     params:
         fasta = genome_fasta,
         script = frag_scriptdir + "/sample_motifs.py",
-        threads = frag_threads,
+        threads = getthreads("bam_to_motif"),
         out_dir = motif_dir,
         log_dir = logdir + "/motifs/bam_to_motif",
     shell:
         """
         mkdir -p {params.log_dir}
         mkdir -p {params.out_dir} 
-        module load python samtools bedtools
-        {params.script} --bam_file {input} --output_file {output} --motif_length 4 \
+        #module load python/3.9 samtools bedtools
+        unset PYTHONPATH
+        python {params.script} --bam_file {input} --output_file {output} --motif_length 4 \
         --threads {params.threads} --num_reads 100000 --reference_genome {params.fasta} \
         > {log} 2>&1
         """
@@ -112,6 +156,8 @@ rule motif_merge:
     output:  
         combined_counts = data_dir + "/analysis/cfdna_wgs/features/combined_motif_counts_matrix.tsv",
         combined_fractions = data_dir + "/analysis/cfdna_wgs/features/combined_motif_fractions_matrix.tsv",
+    conda:
+        ENV_FRAGENTOMICS,
     params:
         motif_tsv_dir = motif_dir,
         script = frag_scriptdir + "/motif_data_count.R",
@@ -121,8 +167,7 @@ rule motif_merge:
         """
         mkdir -p {params.log_dir}
         mkdir -p {params.out_dir} 
-        module load R
-        Rscript {params.script} \
+        Rscript  {params.script} \
         {params.motif_tsv_dir} \
         {output.combined_counts} \
         {output.combined_fractions} \
@@ -134,6 +179,8 @@ rule mds:
     output:  
         mdsRDS = data_dir + "/analysis/cfdna_wgs/features/mds.RData",
         CSVout = data_dir + "/analysis/cfdna_wgs/features/motif_diversity_scores.csv",
+    conda:
+        ENV_FRAGENTOMICS,
     params:
         annotation_table = config["samples"],
         script = frag_scriptdir + "/motif_diversity_score.R",
@@ -143,8 +190,7 @@ rule mds:
         """
         mkdir -p {params.log_dir}
         mkdir -p {params.out_dir} 
-        module load R
-        Rscript {params.script} \
+        Rscript  {params.script} \
         {input} \
         {params.annotation_table} \
         {output.mdsRDS} \
@@ -158,53 +204,53 @@ rule f_profile:
         fprofile_per_lib = data_dir + "/analysis/cfdna_wgs/features/fprofiles.tsv",
         motif_per_fprofile = data_dir + "/analysis/cfdna_wgs/features/motif_per_fprofile.tsv",
         model_dir = directory(data_dir + "/analysis/cfdna_wgs/features/fprofile_model/"),
+    conda:
+        ENV_FRAGENTOMICS,
     params:
         script = frag_scriptdir + "/fprofiles_pkl.py",
         log_dir = logdir + "/motifs/f_profile",
         existing_model = config["existing_motif_model"],
-    run:
-        import os
-        import shutil
-        os.makedirs(output.model_dir, exist_ok=True)
+    shell:
+        r"""
+            set -euo pipefail
+            mkdir -p {params.log_dir} {output.model_dir}
 
-        # If loading an existing model
-        if params.existing_model.lower() != "no":
-            model_file = os.path.join(params.existing_model, "fprofile_model.pkl")
-            symlink_target = os.path.join(output.model_dir, "fprofile_model.pkl")
+            # If loading an existing model
+            if [[ "{params.existing_model}" != "no" ]]; then
+                model_file="{params.existing_model}"
+                model_out="{output.model_dir}/fprofile_model.pkl"
 
-            # Copy the existing model if it exists
-            if os.path.exists(model_file):
-                shutil.copy(model_file, symlink_target)
-                print(f"Copied existing model to: {symlink_target}")
+                if [[ -f "$model_file" ]]; then
+                    cp "$model_file" "$model_out"
+                    python {params.script} \
+                        --data_file {input} \
+                        --output_fprof_per_lib {output.fprofile_per_lib} \
+                        --output_motif_per_fprof {output.motif_per_fprofile} \
+                        --load_model "$model_out" \
+                        > {log} 2>&1
+                else
+                    echo "Specified model file not found: $model_file" >&2
+                    exit 1
+                fi
+            else
+                # Train a new model
+                python {params.script} \
+                    --data_file {input} \
+                    --output_fprof_per_lib {output.fprofile_per_lib} \
+                    --output_motif_per_fprof {output.motif_per_fprofile} \
+                    --save_model {output.model_dir}/fprofile_model.pkl \
+                    > {log} 2>&1
+            fi
+            """
 
-                shell(f"""
-                mkdir -p {params.log_dir}
-                module load python
-                {params.script} --data_file {{input}} \
-                --output_fprof_per_lib {output.fprofile_per_lib} \
-                --output_motif_per_fprof {output.motif_per_fprofile} \
-                --load_model {symlink_target} \
-                > {log} 2>&1
-                """)
-            else:
-                raise FileNotFoundError(f"Specified model file not found: {model_file}")
-        else:
-            # Train a new model
-            model_output = os.path.join(output.model_dir, "fprofile_model.pkl")
-            shell(f"""
-            mkdir -p {params.log_dir}
-            module load python
-            {params.script} --data_file {{input}} \
-            --output_fprof_per_lib {output.fprofile_per_lib} \
-            --output_motif_per_fprof {output.motif_per_fprofile} \
-            --save_model {model_output} \
-            > {log} 2>&1
-            """)
+
 rule f_profile_plot:
     input: data_dir + "/analysis/cfdna_wgs/features/fprofiles.tsv",
     log: logdir + "/f-profile_plot.log",
     output: 
         data_dir + "/analysis/cfdna_wgs/features/fprofiles.pdf",
+    conda:
+        ENV_FRAGENTOMICS,
     params:
         script = frag_scriptdir + "/fprofile_stackedbarplot.py",
         plot_title = config["fprofile_stacked_title"],
@@ -212,7 +258,7 @@ rule f_profile_plot:
         colorscheme = "viridis",
     shell:
         """
-        module load python
+        #module load python/3.9
         python {params.script} --input_file {input} --metadata_file {params.metadata_file} \
         --output_file {output} --title "{params.plot_title}" --colormap {params.colorscheme} \
         > {log} 2>&1
@@ -225,6 +271,8 @@ if not APPLY_MOTIF_CUTPOINTS:
         output:
             plot_out = data_dir + "/analysis/cfdna_wgs/features/fprofile_ROC.pdf",
             csv_out  = data_dir + "/analysis/cfdna_wgs/features/fprofile_AUC.csv",
+        conda:
+            ENV_FRAGENTOMICS,
         params:
             libraries_tsv = config["samples"],
             script = frag_scriptdir + "/motif_ROC_plot.R",
@@ -234,7 +282,6 @@ if not APPLY_MOTIF_CUTPOINTS:
             """
             mkdir -p {params.log_dir}
             mkdir -p {params.out_dir}
-            module load R
             Rscript {params.script} \
             {input} \
             {params.libraries_tsv} \
@@ -248,10 +295,12 @@ else:
     rule motif_use_existing_auc:
         output:
             fprofile_auc = data_dir + "/analysis/cfdna_wgs/features/fprofile_AUC.csv",
+        conda:
+            ENV_FRAGENTOMICS,
         log:
             logdir + "/motifs/use_existing_auc.log"
         params:
-            existing_auc = os.path.join(config.get("existing_motif_scores_dir", ""), "fprofile_AUC.csv"),
+            existing_auc = os.path.join(config.get("existing_motif_scores_dir", ""), "aucs/aucs.csv"),
             out_dir = data_dir + "/analysis/cfdna_wgs/features",
         shell:
             """

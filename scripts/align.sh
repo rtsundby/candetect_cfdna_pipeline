@@ -5,13 +5,10 @@ input_r2=$3
 threads=$4
 output_sort=$5
 
-module load samtools
-module load bwa
-
 bwa mem -M -t $threads \
     $input_ref \
     $input_r1 \
     $input_r2 |
     samtools view -@ $threads -Sb - -o - |
     samtools sort -@ $threads - -o $output_sort
-samtools index -@ threads $output_sort
+samtools index -@ $threads $output_sort

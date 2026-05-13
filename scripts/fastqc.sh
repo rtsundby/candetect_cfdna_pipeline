@@ -8,8 +8,6 @@ input="${1}"
 outdir="${2}"
 threads="${3}"
 
-module load fastqc
-
 # Functions
 fastqc  --outdir $outdir \
         --quiet \

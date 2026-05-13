@@ -11,6 +11,46 @@ import glob
 import os
 import itertools as it
 
+import yaml
+
+
+#######define software path in this part#########
+current_dir = os.getcwd()
+sys.path.append(f'{current_dir}/config')
+import program
+
+# -----------------------------
+# Path expansion for strings in config (~, $VARS)
+# -----------------------------
+def resolve_config_paths(config_dict):
+    for k, v in config_dict.items():
+        if isinstance(v, str):
+            config_dict[k] = os.path.expandvars(os.path.expanduser(v))
+        elif isinstance(v, dict):
+            resolve_config_paths(v)
+        elif isinstance(v, list):
+            config_dict[k] = [os.path.expandvars(os.path.expanduser(i)) if isinstance(i, str) else i for i in v]
+
+resolve_config_paths(config)
+
+print(config)
+
+
+#########################################################
+# READ CLUSTER PER-RULE REQUIREMENTS
+#########################################################
+CLUSTERYAML = os.path.join(current_dir,"config/cluster.yaml")
+with open(CLUSTERYAML) as json_file:
+    CLUSTER = yaml.safe_load(json_file)
+
+## Create lambda functions to allow a way to insert read-in values
+## as rule directives
+getthreads=lambda rname:int(CLUSTER[rname]["threads"]) if rname in CLUSTER and "threads" in CLUSTER[rname] else int(CLUSTER["__default__"]["threads"])
+getmemg=lambda rname:CLUSTER[rname]["mem"] if rname in CLUSTER and "mem" in CLUSTER[rname] else CLUSTER["__default__"]["mem"]
+getmemG=lambda rname:getmemg(rname).replace("g","G")
+
+
+
 # Values directly from configuration file
 bwa_dir             = config["ref_dir"]
 COHORTS             = config["cohorts"]
@@ -27,6 +67,7 @@ PE2                 = config.get("PE2", "need to define PE2")
 refdir              = config["ref_dir"]
 samples             = config["samples"]
 threads             = config["threads"]
+ENV_FRAGENTOMICS    = config["env_fragentomics"]
 
 # Directory values derived from data_dir in configuration YAML
 benchdir            = data_dir + "/benchmark"
@@ -36,6 +77,9 @@ frag_fastqs         = data_dir + "/fastq"
 frag_scriptdir      = frag_repo +  "/scripts"
 logdir              = data_dir + "/logs/bin_wise_fragmentomics"
 qcdir               = data_dir + "/qc"
+
+#Make sure logdir exists
+os.makedirs(logdir, exist_ok=True)
 
 # Bin-wise fragmentomic specific directories
 bin_wise_frag            = frag + "/bin_wise_fragmentomics"
@@ -89,7 +133,7 @@ _binwise_base_outputs = [
     bin_wise_frag + "/binwise_armz.clean.csv",
     bin_wise_frag + "/binwise_ratio.norm_rows.clean.csv",
     expand(bin_wise_frag + "/model/probs/{c1}_v_{c2}.csv", zip, c1=COHORT_1, c2=COHORT_2),
-    expand(bin_wise_frag + "/model/coeffs/{c1}_v_{c2}.csv", zip, c1=COHORT_1, c2=COHORT_2),
+   
 ]
 # Mode 3: scores only via cutpoint application
 if APPLY_BINWISE_CUTPOINTS:
@@ -99,7 +143,8 @@ if APPLY_BINWISE_CUTPOINTS:
 # Modes 1/2: full AUC + plots
 else:
     _binwise_analysis_outputs = [
-        bin_wise_frag + "/aucs/aucs/aucs.csv",
+        expand(bin_wise_frag + "/model/coeffs/{c1}_v_{c2}.csv", zip, c1=COHORT_1, c2=COHORT_2),
+        bin_wise_frag + "/aucs/aucs.csv",
         expand(bin_wise_frag + "/scores/{c1}_v_{c2}.csv", zip, c1=COHORT_1, c2=COHORT_2),
         expand(bin_wise_frag + "/plots/prob_per_repeat/{c1}_v_{c2}.pdf", zip, c1=COHORT_1, c2=COHORT_2),
         expand(bin_wise_frag + "/plots/prob_per_sample/{c1}_v_{c2}.pdf", zip, c1=COHORT_1, c2=COHORT_2),
@@ -112,21 +157,19 @@ rule all:
     _binwise_analysis_outputs,
 
 rule filt_bam_to_frag_bed:
-    resources:
-        time="72:00:00",
-        mem_mb="100000",
-        cpus="30",
     benchmark: benchdir + "/{library}_filt_bam_to_frag_bed.benchmark.txt",
     input: frag_bams + "/{library}_filt.bam",
     log: logdir + "/bam_to_bed/{library}_filt_bam_to_frag_bed.log",
     output: bin_wise_beds + "/{library}_filt.bed",
+    conda:
+        ENV_FRAGENTOMICS
     params:
         fragdir = frag,
         bin_wise_fragdir = bin_wise_frag,
         out_dir = bin_wise_beds,
         fasta = genome_fasta,
         script = frag_scriptdir + "/filt_bam_to_frag_bed.sh",
-        threads = frag_threads,
+        threads = getthreads("filt_bam_to_frag_bed"),
         log_dir = logdir + "/bam_to_bed",
     shell:
         """
@@ -144,13 +187,12 @@ rule filt_bam_to_frag_bed:
 
 # Make GC distributions
 rule gc_distro:
-    resources:
-        time="12:00:00",
-        mem_mb="64000",
     benchmark: benchdir + "/{library}_frag_gc_distro.benchmark.txt",
     input: bin_wise_beds + "/{library}_filt.bed",
     log: logdir + "/gc_distro/{library}_frag_gc_distro.log",
     output: bin_wise_gc_distros + "/{library}_gc_distro.csv",
+    conda:
+        ENV_FRAGENTOMICS
     params:
         script = frag_scriptdir + "/gc_distro.R",
         out_dir = bin_wise_gc_distros,
@@ -160,7 +202,6 @@ rule gc_distro:
         mkdir -p {params.log_dir}
         mkdir -p {params.out_dir}
 
-        module load R
         Rscript {params.script} \
         {input} \
         {output} > {log} 2>&1
@@ -168,13 +209,12 @@ rule gc_distro:
 
 # Make healthy GC distributions summary file
 rule healthy_gc:
-    resources:
-        time="12:00:00",
-        mem_mb="32000",
     benchmark: benchdir + "/frag_healthy_gc.benchmark.txt",
     input: expand(bin_wise_gc_distros + "/{library}_gc_distro.csv", library = FRAG_HEALTHY_LIBRARIES),
     log: logdir + "/healthy_gc/frag_healthy_gc.log",
     output: bin_wise_gc_distros + "/healthy_med.rds",
+    conda:
+        ENV_FRAGENTOMICS
     params:
         distro_dir = bin_wise_gc_distros,
         log_dir = logdir + "/healthy_gc",
@@ -182,7 +222,6 @@ rule healthy_gc:
     shell:
         """
         mkdir -p {params.log_dir} 
-        module load R && \
         Rscript {params.script} \
         {params.distro_dir} \
         "{input}" \
@@ -191,15 +230,14 @@ rule healthy_gc:
 
 # Sample fragments by healthy GC proportions
 rule frag_gc_sample:
-    resources:
-        time="12:00:00",
-        mem_mb="32000",
     benchmark: benchdir + "/{library}_frag_gc_sample.benchmark.txt",
     input:
         frag_bed = bin_wise_beds+ "/{library}_filt.bed",
         healthy_med = bin_wise_gc_distros + "/healthy_med.rds",
     log: logdir + "/gc_sample/{library}_frag_gc_sample.log",
     output: bin_wise_beds+ "/{library}_sampled_frag.bed",
+    conda:
+        ENV_FRAGENTOMICS
     params:
         log_dir = logdir + "/gc_sample",
         out_dir = bin_wise_beds,
@@ -209,7 +247,6 @@ rule frag_gc_sample:
         mkdir -p {params.log_dir} 
         mkdir -p {params.out_dir} 
 
-        module load R
         Rscript {params.script} \
         {input.healthy_med} \
         {input.frag_bed} \
@@ -217,20 +254,20 @@ rule frag_gc_sample:
         """
 # Sum fragments in short and long length groups
 rule frag_sum:
-    resources:
-        time="8:00:00",
-        mem_mb="64000",
-        cpus="16",
     benchmark: benchdir + "/{library}_frag_sum.benchmark.txt",
-    input: bin_wise_beds+ "/{library}_sampled_frag.bed",
-    log: logdir + "/frag_sum/{library}_bin_wise_frag_window_sum.log",
+    input:
+        bin_wise_beds+ "/{library}_sampled_frag.bed",
+    log:
+        logdir + "/frag_sum/{library}_bin_wise_frag_window_sum.log",
     output:
         short = bin_wise_beds+ "/{library}_norm_short.bed",
         long =  bin_wise_beds+ "/{library}_norm_long.bed",
+    conda:
+        ENV_FRAGENTOMICS
     params:
         log_dir = logdir + "/frag_sum",
         script = frag_scriptdir + "/frag_window_sum.sh",
-        threads = frag_threads,
+        threads = getthreads("frag_sum"),
     shell:
         """
         mkdir -p {params.log_dir}
@@ -241,10 +278,6 @@ rule frag_sum:
 
 # Count short and long fragments intersecting kept genomic windows
 rule frag_window_count:
-    resources:
-        time="12:00:00",
-        mem_mb="200000",
-        cpus="40",
     benchmark: benchdir + "/{library}_bin_wise_frag_window_int.benchmark.txt",
     input:
         short = bin_wise_beds+ "/{library}_norm_short.bed",
@@ -255,9 +288,11 @@ rule frag_window_count:
     output:
         short = bin_wise_counts + "/{library}_cnt_short.tmp",
         long = bin_wise_counts + "/{library}_cnt_long.tmp",
+    conda:
+        ENV_FRAGENTOMICS
     params:
         script = frag_scriptdir + "/frag_window_int.sh",
-        threads = threads,
+        threads = getthreads("frag_window_count"),
         out_dir = bin_wise_counts,
         log_dir = logdir + "/frag_window_count",
     shell:
@@ -315,9 +350,6 @@ rule frag_window_count:
 
 # Merge short and long fragment counts by genomic poistion for all libraries
 rule frag_count_merge:
-    resources:
-        time="5:30:00",
-        mem_mb="200000",
     benchmark:
         benchdir + "/frag_count_merge.benchmark.txt",
     input:
@@ -329,6 +361,8 @@ rule frag_count_merge:
         logdir + "/frag_count_merge/frag_count_merge.log",
     output:
         bin_wise_frag + "/frag_counts.tsv",
+    conda:
+        ENV_FRAGENTOMICS
     params:
         counts_dir = bin_wise_counts,
         script = frag_scriptdir + "/count_merge.sh",
@@ -342,32 +376,28 @@ rule frag_count_merge:
         &> {log}
         """
 rule unit_cent_sd:
-    resources:
-        time="1:30:00",
-        mem_mb="30000",
     benchmark: benchdir + "/unit_cent_sd.benchmark.txt",
     input: bin_wise_frag + "/frag_counts.tsv",
     log: logdir + "/unit_cent_sd/unit_cent_sd.log",
     output: bin_wise_frag + "/ratios.tsv",
+    conda:
+        ENV_FRAGENTOMICS
     params:
         script = frag_scriptdir + "/make_ratios.R",
         log_dir = logdir + "/unit_cent_sd",
     shell:
         """
         mkdir -p {params.log_dir}
-        module load R
         Rscript {params.script} \
         {input} {output} > {log} 2>&1
         """
 rule binwise_armz_raw:
-    resources:
-        time="0:60:00",
-        mem_mb="30000",
-        cpus="8",
     input:
         bin_wise_frag + "/frag_counts.tsv",
     output:
         bin_wise_frag + "/binwise_armz.raw.csv",
+    conda:
+        ENV_FRAGENTOMICS
     log:
         logdir + "/armz_raw/binwise_armz_raw.log",
     params:
@@ -379,8 +409,6 @@ rule binwise_armz_raw:
     shell:
         """
         mkdir -p {params.log_dir}
-        module load R
-        
         Rscript {params.script} \
         {params.cytoband} \
         {params.sample_list} \
@@ -390,16 +418,14 @@ rule binwise_armz_raw:
         &> {log}
         """
 rule binwise_features:
-    resources:
-        time="0:60:00",
-        mem_mb="30000",
-        cpus="8",
     input:
         arm_z = bin_wise_frag +  "/binwise_armz.raw.csv",
         ratio = bin_wise_frag + "/ratios.tsv",
     output:
         arm_z = bin_wise_frag + "/binwise_armz.clean.csv",
         ratio = bin_wise_frag + "/binwise_ratio.norm_rows.clean.csv",
+    conda:
+        ENV_FRAGENTOMICS
     log:
         logdir + "/features/binwise_features.log",
     params:
@@ -416,66 +442,60 @@ rule binwise_features:
         --out_dir {params.out_dir} \
         &> {log}
         """      
-rule binwise_model:
-    resources:
-        time="0:60:00",
-        mem_mb="30000",
-        cpus="8",
-    input:
-        ratio = bin_wise_frag + "/binwise_ratio.norm_rows.clean.csv",
-    output:
-        probs = bin_wise_frag + "/model/probs/{c1}_v_{c2}.csv",
-        coeffs = bin_wise_frag + "/model/coeffs/{c1}_v_{c2}.csv",
-    log:
-        logdir + "/model/binwise_model_{c1}_v_{c2}.log"
-    params:
-        arm_z = bin_wise_frag + "/binwise_armz.clean.csv",
-        sample_list = samples,
-        model = lambda wildcards: config["existing_delfi_model"] if config["existing_delfi_model"] != "no" else None,
-        out_dir = bin_wise_frag + "/model",
-        out_dirprob = bin_wise_frag + "/model/prob",
-        out_dircoeffs = bin_wise_frag + "/model/coeffs",
-        script = frag_scriptdir + "/binwise_model.py",
-        c1 = lambda wildcards: wildcards.c1,
-        c2 = lambda wildcards: wildcards.c2,
-        name = "{c1}_v_{c2}",
-        log_dir = logdir + "/model",
-    shell:
-        """
-        mkdir -p {params.out_dir} {params.out_dirprob} {params.out_dircoeffs} {params.log_dir}
 
-        if [ "{params.model}" != "None" ]; then
-            echo "Using existing model from config: {params.model}"
-            python3 {params.script} \
-            --armz_csv {params.arm_z} \
-            --ratio_csv {input.ratio} \
-            --samplelist {params.sample_list} \
-            --cohort1 {params.c1} \
-            --cohort2 {params.c2} \
-            --name {params.name} \
-            --out_dir {params.out_dir} \
-            --existing_model {params.model} \
-            &> {log}
-        else
-            echo "Training new model"
-            python3 {params.script} \
-            --armz_csv {params.arm_z} \
-            --ratio_csv {input.ratio} \
-            --samplelist {params.sample_list} \
-            --cohort1 {params.c1} \
-            --cohort2 {params.c2} \
-            --name {params.name} \
-            --out_dir {params.out_dir} \
-            &> {log}
-        fi
-        """
 # Modes 1/2: compute AUC and plots
 if not APPLY_BINWISE_CUTPOINTS:
+    rule binwise_model:
+        input:
+            ratio = bin_wise_frag + "/binwise_ratio.norm_rows.clean.csv",
+        output:
+            probs = bin_wise_frag + "/model/probs/{c1}_v_{c2}.csv",
+            coeffs = bin_wise_frag + "/model/coeffs/{c1}_v_{c2}.csv",
+        conda:
+            ENV_FRAGENTOMICS
+        log:
+            logdir + "/model/binwise_model_{c1}_v_{c2}.log"
+        params:
+            arm_z = bin_wise_frag + "/binwise_armz.clean.csv",
+            sample_list = samples,
+            model = lambda wildcards: config["existing_delfi_model"] if config["existing_delfi_model"] != "no" else None,
+            out_dir = bin_wise_frag + "/model",
+            out_dirprob = bin_wise_frag + "/model/prob",
+            out_dircoeffs = bin_wise_frag + "/model/coeffs",
+            script = frag_scriptdir + "/binwise_model.py",
+            c1 = lambda wildcards: wildcards.c1,
+            c2 = lambda wildcards: wildcards.c2,
+            name = "{c1}_v_{c2}",
+            log_dir = logdir + "/model",
+        shell:
+            """
+            mkdir -p {params.out_dir} {params.out_dirprob} {params.out_dircoeffs} {params.log_dir}
+            if [ "{params.model}" != "None" ]; then
+                echo "Using existing model from config: {params.model}"
+                python3 {params.script} \
+                --armz_csv {params.arm_z} \
+                --ratio_csv {input.ratio} \
+                --samplelist {params.sample_list} \
+                --cohort1 {params.c1} \
+                --cohort2 {params.c2} \
+                --name {params.name} \
+                --out_dir {params.out_dir} \
+                --existing_model {params.model} \
+                &> {log}
+            else
+                echo "Training new model"
+                python3 {params.script} \
+                --armz_csv {params.arm_z} \
+                --ratio_csv {input.ratio} \
+                --samplelist {params.sample_list} \
+                --cohort1 {params.c1} \
+                --cohort2 {params.c2} \
+                --name {params.name} \
+                --out_dir {params.out_dir} \
+                &> {log}
+            fi
+            """
     rule binwise_aucs:
-        resources:
-            time="2:00:00",
-            mem_mb="30000",
-            cpus="8",
         input:
             expand(bin_wise_frag + "/model/probs/{c1}_v_{c2}.csv",
             zip,
@@ -490,6 +510,8 @@ if not APPLY_BINWISE_CUTPOINTS:
                     c1 = COHORT_1,
                     c2 = COHORT_2
             ),
+        conda:
+            ENV_FRAGENTOMICS
         log:
             logdir + "/auc/binwise_aucs.log"
         params:
@@ -514,10 +536,6 @@ if not APPLY_BINWISE_CUTPOINTS:
             &> {log}
             """
     rule plot_probs:
-        resources:
-            time="0:20:00",
-            mem_mb="30000",
-            cpus="8",
         input:
             expand(bin_wise_frag + "/model/probs/{c1}_v_{c2}.csv",
             zip,
@@ -536,6 +554,8 @@ if not APPLY_BINWISE_CUTPOINTS:
                 c1 = COHORT_1,
                 c2 = COHORT_2
             ),
+        conda:
+            ENV_FRAGENTOMICS
         log:
             logdir + "/plot_probs/plot_probs.log"
         params:
@@ -555,14 +575,12 @@ if not APPLY_BINWISE_CUTPOINTS:
             &> {log}
             """
     rule plot_coeff_heatmaps:
-        resources:
-            time="0:20:00",
-            mem_mb="30000",
-            cpus="8",
         input:
             arm_z = bin_wise_frag + "/binwise_armz.clean.csv",
         output:
             bin_wise_frag + "/binwise/plots/coeff_heatmap/binwise_armz.clean.pdf",
+        conda:
+            ENV_FRAGENTOMICS
         log:
             logdir + "/coeff_heatmaps/binwise_plot_coeff_heatmaps.log",
         params:
@@ -581,15 +599,50 @@ if not APPLY_BINWISE_CUTPOINTS:
 
 # Mode 3: apply existing cutpoints, no new AUC
 else:
+    rule binwise_model:
+        input:
+            ratio = bin_wise_frag + "/binwise_ratio.norm_rows.clean.csv",
+        output:
+            probs = bin_wise_frag + "/model/probs/{c1}_v_{c2}.csv",
+            #coeffs = bin_wise_frag + "/model/coeffs/{c1}_v_{c2}.csv",
+        conda:
+            ENV_FRAGENTOMICS
+        log:
+            logdir + "/model/binwise_model_{c1}_v_{c2}.log"
+        params:
+            arm_z = bin_wise_frag + "/binwise_armz.clean.csv",
+            sample_list = samples,
+            model = lambda wildcards: config["existing_delfi_model"] if config["existing_delfi_model"] != "no" else None,
+            out_dir = bin_wise_frag + "/model",
+            out_dirprob = bin_wise_frag + "/model/prob",
+            out_dircoeffs = bin_wise_frag + "/model/coeffs",
+            script = frag_scriptdir + "/binwise_model_mod3.py",
+            c1 = lambda wildcards: wildcards.c1,
+            c2 = lambda wildcards: wildcards.c2,
+            name = "{c1}_v_{c2}",
+            log_dir = logdir + "/model",
+        shell:
+            """
+            mkdir -p {params.out_dir} {params.out_dirprob} {params.out_dircoeffs} {params.log_dir}
+            echo "Using existing model from config: {params.model}"
+                python3 {params.script} \
+                --armz_csv {params.arm_z} \
+                --ratio_csv {input.ratio} \
+                --samplelist {params.sample_list} \
+                --cohort1 {params.c1} \
+                --cohort2 {params.c2} \
+                --name {params.name} \
+                --out_dir {params.out_dir} \
+                --existing_model {params.model} \
+                &> {log}
+            """
     rule binwise_apply_cutpoints:
-        resources:
-            time="0:30:00",
-            mem_mb="16000",
-            cpus="4",
         input:
             probs = bin_wise_frag + "/model/probs/{c1}_v_{c2}.csv",
         output:
             scores = bin_wise_frag + "/scores/{c1}_v_{c2}.csv",
+        conda:
+            ENV_FRAGENTOMICS
         log:
             logdir + "/apply_cutpoints/binwise_apply_cutpoints_{c1}_v_{c2}.log"
         params:

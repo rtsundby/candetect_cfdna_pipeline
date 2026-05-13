@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 #
 # Unit test variables
-## mqc_dir="test/analysis/qc/frag_multiqc_data"
+## mqc_dir="test/qc/frag_multiqc_data"
 ## fastqc_input = paste0(mqc_dir,"/multiqc_fastqc.txt")
 ## samstats_input = paste0(mqc_dir, "/multiqc_samtools_stats.txt")
 ## flagstats_input = paste0(mqc_dir, "/multiqc_samtools_flagstat.txt")
@@ -20,35 +20,39 @@ readqc_out_tbl = args[7]
 frag_len_out_tbl = args[8]
 
 library(tidyverse)
+library(stringr)
 
 process_multiqc_fastqc = function(multiqc_fastqc_input){
   as_tibble(read.table(multiqc_fastqc_input, header = TRUE, sep = '\t', stringsAsFactors = FALSE)) %>%
-  mutate(library = sub("_(processed.*|raw_.*|unpaired.*)$","",Sample)) %>%
-  mutate(read = ifelse(grepl("R1", Filename), "read1", "read2")) %>%
-  mutate(fastq_processing = gsub("_.*$","",substr(Sample, 8, length(Sample)))) %>%
-  select(!c(Sample,File.type,Encoding)) %>%
-  pivot_wider(
-    names_from = c(read,fastq_processing),
-    values_from = !c(library,read,fastq_processing))
+    mutate(library = sub("_(processed.*|raw_.*|unpaired.*)$", "", Sample)) %>%
+    mutate(read = ifelse(grepl("R1", Filename), "read1", "read2")) %>%
+    mutate(fastq_processing = word(Sample, -2, sep = "_")) %>%
+    select(!c(Sample,File.type,Encoding)) %>%
+    pivot_wider(
+      names_from = c(read,fastq_processing),
+      values_from = !c(library,read,fastq_processing))
 }
 
 fastqc = process_multiqc_fastqc(fastqc_input)
+fastqc[1:5,1:5]
 
 process_multiqc_samfile = function(multiqc_samfile){
-  read_tsv(multiqc_samfile) %>% mutate(library = substr(Sample, 1, 6)) %>%
-  mutate(bam_processing = gsub("_.*$","",gsub("lib..._","", Sample))) %>%
-  select(!c(Sample)) %>%
-  pivot_wider(
-    names_from = c(bam_processing),
-    values_from = !c(library, bam_processing))
+  read_tsv(multiqc_samfile) %>% mutate(library = sub("_(filt|raw)_samstats$", "", Sample)) %>%
+    mutate(bam_processing = word(Sample, -2, sep = "_")) %>%
+    select(!c(Sample)) %>%
+    pivot_wider(
+      names_from = c(bam_processing),
+      values_from = !c(library, bam_processing))
 }
 
 samstats = process_multiqc_samfile(samstats_input)
 flagstats = process_multiqc_samfile(flagstats_input)
+samstats[1:5,1:5]
+
 
 deeptools_frag = read_tsv(deeptools_frag_input, col_names = c("frag_len","frag_count","file"), skip = 1) %>%
   filter(frag_len < 500) %>%
-  mutate(library = substr(gsub("^.*lib", "lib", file), 1,6)) %>%
+  mutate(library = gsub("_filt.bam", "", basename(file))) %>%
   mutate(frag_len = sub("^", "frag_len", frag_len)) %>%
   select(library, frag_len, frag_count) %>%
   pivot_wider(
@@ -56,26 +60,41 @@ deeptools_frag = read_tsv(deeptools_frag_input, col_names = c("frag_len","frag_c
     values_from = frag_count)
 
 picard = as_tibble(read.table(picard_input, header = TRUE, sep = '\t', stringsAsFactors = FALSE)) %>%
-  mutate(library = Sample)
+  mutate(library = gsub("_filt", "", Sample))
 
-deeptools_cov = read_tsv(deeptools_cov_input, skip = 1) %>%
-  pivot_longer(!c(`#'chr'`, `'start'`,`'end'`), names_to = "file", values_to = "cnt") %>%
-  rename(chr = `#'chr'`,
-         start = `'start'`,
-         end = `'end'`) %>%
-  mutate(library = substr(file, 2, 7)) %>%
+
+###################################modified this original code to process deeptools coverage file
+#deeptools_cov = read_tsv(deeptools_cov_input, skip = 1) %>%
+#  pivot_longer(!c(`#'chr'`, `'start'`,`'end'`), names_to = "file", values_to = "cnt") %>%
+#  rename(chr = `#'chr'`,
+#         start = `'start'`,
+#         end = `'end'`) %>%
+#  mutate(library = substr(file, 2, 7)) %>%
+#  group_by(library) %>%
+#  summarise(
+#    mean_cov = mean(cnt),
+#    median_cov = median(cnt),
+#            )
+deeptools_cov = read_tsv(deeptools_cov_input) %>%
+  #pivot_longer(!c(`#'chr'`, `'start'`,`'end'`), names_to = "file", values_to = "cnt") %>%
+  #rename(chr = `#'chr'`,
+  #       start = `'start'`,
+  #       end = `'end'`) %>%
+  mutate(library = gsub("_coverage.tsv","",file)) %>%
   group_by(library) %>%
   summarise(
     mean_cov = mean(cnt),
     median_cov = median(cnt),
-            )
-
+  )
+#deeptools_cov 
 readqc = fastqc %>%
   left_join(samstats, by = "library") %>%
   left_join(flagstats, by = "library") %>%
   left_join(deeptools_frag, by = "library") %>%
   left_join(picard, by = "library") %>%
   left_join(deeptools_cov, by = "library")
+
+print(head(readqc))
 
 write.table(readqc, file = readqc_out_tbl, row.names = F, sep = '\t', quote = F)
 
@@ -89,5 +108,8 @@ frag_len =
   pivot_wider(names_from = library, values_from = count) %>%
   right_join(all_frag_len) %>% arrange(frag_len) %>%
   replace(is.na(.), 0)
+#ggplot(frag_len, aes(x = frag_len, y = CPM00034602)) +
+#  geom_col()
+#summary(frag_len$CPM00034602)
 
 write_tsv(frag_len, file = frag_len_out_tbl)

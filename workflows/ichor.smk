@@ -1,5 +1,46 @@
 import os 
 import glob
+import yaml
+
+
+#######define software path in this part#########
+current_dir = os.getcwd()
+sys.path.append(f'{current_dir}/config')
+import program
+
+# -----------------------------
+# Path expansion for strings in config (~, $VARS)
+# -----------------------------
+def resolve_config_paths(config_dict):
+    for k, v in config_dict.items():
+        if isinstance(v, str):
+            config_dict[k] = os.path.expandvars(os.path.expanduser(v))
+        elif isinstance(v, dict):
+            resolve_config_paths(v)
+        elif isinstance(v, list):
+            config_dict[k] = [os.path.expandvars(os.path.expanduser(i)) if isinstance(i, str) else i for i in v]
+
+resolve_config_paths(config)
+
+print(config)
+
+###load conda 
+ENV_FRAGENTOMICS    = config["env_fragentomics"]
+
+#########################################################
+# READ CLUSTER PER-RULE REQUIREMENTS
+#########################################################
+CLUSTERYAML = os.path.join(current_dir,"config/cluster.yaml")
+with open(CLUSTERYAML) as json_file:
+    CLUSTER = yaml.safe_load(json_file)
+
+## Create lambda functions to allow a way to insert read-in values
+## as rule directives
+getthreads=lambda rname:int(CLUSTER[rname]["threads"]) if rname in CLUSTER and "threads" in CLUSTER[rname] else int(CLUSTER["__default__"]["threads"])
+getmemg=lambda rname:CLUSTER[rname]["mem"] if rname in CLUSTER and "mem" in CLUSTER[rname] else CLUSTER["__default__"]["mem"]
+getmemG=lambda rname:getmemg(rname).replace("g","G")
+
+
 
 data_dir = config["data_dir"]
 size_selected_dir = config["data_dir"] + "/size_selected_bams"
@@ -27,46 +68,42 @@ rule all:
         ichor_dir + "/tf.csv",
 
 rule size_select:
-    resources:
-        mem_mb = "64000",
-        time   = "0:45:00",
-        cpus   = "16",
     input:
         bam_file = data_dir + "/bams/{samples}_filt.bam"
     output:
         ss_bam = size_selected_dir + "/{samples}.ss.bam",
     log:
         log_dir + "/size_select/{samples}.log",
+    conda:
+        ENV_FRAGENTOMICS
     params:
         out_dir = size_selected_dir,
         log_dir = log_dir + "/size_select",
         min_size = config["min_fragment_size"],
         max_size = config["max_fragment_size"],
+        threads = getthreads("size_select")
     shell:
         """
         mkdir -p {params.out_dir}
         mkdir -p {params.log_dir}
         
-        module load samtools
-        samtools view -h {input.bam_file} -@ {resources.cpus} | \
+        #module load samtools
+        samtools view -h {input.bam_file} -@ {params.threads} | \
         awk 'substr($0,1,1)=="@" || ($9>= {params.min_size} && $9<={params.max_size}) || ($9<=-{params.min_size} && $9>=-{params.max_size})' | \
-        samtools view -b -@ {resources.cpus} > {output.ss_bam}
-        samtools index -@ {resources.cpus} {output.ss_bam}
+        samtools view -b -@ {params.threads} > {output.ss_bam}
+        samtools index -@ {params.threads} {output.ss_bam}
         """
 
 rule read_counter:
-    resources:
-        mem_mb = "32000",
-        time   = "0:25:00",
-        cpus   = "16",
     input:
         bam_file = size_selected_dir + "/{samples}.ss.bam",
     output:
         wig_file = wig_dir + "/{samples}.wig",
     log:
         log_dir + "/wig_files/{samples}.log",
+    conda:
+        ENV_FRAGENTOMICS
     params:
-        readCounter = config["readCounter_script"],
         window		= config["window"],
         quality		= config["quality"],
         chrs		= config["chromosomes"],
@@ -77,7 +114,7 @@ rule read_counter:
         mkdir -p {params.out_dir}
         mkdir -p {params.log_dir}
 
-        {params.readCounter} \
+        readCounter \
         -w {params.window} \
         -q {params.quality} \
         -c {params.chrs} \
@@ -87,10 +124,6 @@ rule read_counter:
         """
         
 rule ichorCNA:
-    resources:
-        mem_mb = "64000",
-        time   = "0:10:00",
-        cpus   = "16",
     input:
         tum_wig = wig_dir + "/{tumor}.wig",
     output:
@@ -102,6 +135,8 @@ rule ichorCNA:
         #rdata="results/ichorCNA/{tumor}/{tumor}.RData"
     log:
         log_dir + "/ichorCNA/{tumor}.log",
+    conda:
+        ENV_FRAGENTOMICS
     params:
         rscript           = config["ichorCNA_rscript"],
         libdir            = config["ichorCNA_libdir"], # added
@@ -141,7 +176,6 @@ rule ichorCNA:
         """
         mkdir -p {params.out_dir}
         mkdir -p {params.log_dir}
-        module load R
         
         Rscript {params.rscript} \
         --libdir {params.libdir} \
@@ -181,11 +215,7 @@ rule ichorCNA:
         # """
 
 
-rule features:
-    resources:
-        mem_mb = "64000",
-        time   = "0:20:00",
-        cpus   = "16",  
+rule features: 
     input:
         ichor_dir = directory(ichor_dir),
         cna_files = expand(ichor_dir + "/{samples}/{samples}.cna.seg", samples=LIBS)
@@ -193,6 +223,8 @@ rule features:
         tf_csv = ichor_dir + "/tf.csv"
     log:
         log_dir + "/features/features.log"
+    conda:
+        ENV_FRAGENTOMICS
     params:
         script = "scripts/features.py",
         log_dir = log_dir + "/features"
@@ -221,7 +253,7 @@ rule features:
         echo "Output file: {output.tf_csv}" >> {log} 2>&1
         
         # Load Python module if needed
-        module load python || echo "Warning: Failed to load Python module" >> {log} 2>&1
+        #module load python/3.9 || echo "Warning: Failed to load Python module" >> {log} 2>&1
 
         # Run the Python script with error handling
         python {params.script} \

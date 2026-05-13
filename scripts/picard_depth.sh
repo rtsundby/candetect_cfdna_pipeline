@@ -4,10 +4,7 @@ genome_fasta=$2
 output=$3
 threads=$4
 
-module load picard
-module load java
-
-java -jar -Xmx128g -XX:ParallelGCThreads=32 $PICARDJARPATH/picard.jar CollectWgsMetrics\
+picard -Xmx110g -XX:ParallelGCThreads=${threads} CollectWgsMetrics \
        INPUT=$input \
        OUTPUT=$output \
        READ_LENGTH=150 \

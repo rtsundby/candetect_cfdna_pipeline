@@ -12,8 +12,6 @@ threads="${5}"
 read_type="${6:-PE}"     # Default to PE if not specified
 read_length="${7:-150}"  # Default to 150bp if not specified
 
-module load deeptools
-
 # Set up extension parameters based on read type
 if [ "$read_type" == "PE" ]; then
     extend_param="--centerReads"

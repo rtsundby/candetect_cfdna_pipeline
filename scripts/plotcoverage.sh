@@ -10,8 +10,6 @@ threads=$3
 output_tsv=$4
 output_pdf=$5
 
-module load deeptools
-
 # Run plotCoverage for single BAM file
 plotCoverage \
     --bamfiles "$input_bam" \

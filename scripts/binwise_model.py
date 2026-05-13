@@ -4,7 +4,7 @@ import numpy as np
 import os
 import pandas as pd
 import pickle
-import snakemake
+#import snakemake
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler

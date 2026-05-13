@@ -12,8 +12,6 @@ output_hist="${3}"
 output_raw="${4}"
 blacklist="${5}"
 threads="${6}"
-
-module load deeptools 
 bamPEFragmentSize --bamfiles $input \
                   --numberOfProcessors $threads \
                   --blackListFileName $blacklist \
