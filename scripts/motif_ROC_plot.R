@@ -9,6 +9,13 @@ libraries_tsv = args[2]
 plot_out = args[3]
 csv_out = args[4]
 
+
+#fprofiles_tsv = "/data/CCRCCDI/analysis/ccrtegs65/Analysis_NF1_training/nf1_training_set_new/analysis/cfdna_wgs/features/fprofiles.tsv"
+#libraries_tsv = "/data/CCRCCDI/analysis/ccrtegs65/Analysis_NF1_training/input/input_libraries_nf1_training_set.tsv"
+#plot_out = "/data/CCRCCDI/analysis/ccrtegs65/Analysis_NF1_training/nf1_training_set_new/analysis/cfdna_wgs/features/fprofile_AUCROC/fprofile_ROC_healthy_v_MPNST.pdf"
+#csv_out = "/data/CCRCCDI/analysis/ccrtegs65/Analysis_NF1_training/nf1_training_set_new/analysis/cfdna_wgs/features/fprofile_AUCROC/fprofile_AUC_healthy_v_MPNST.csv"
+
+
 # Load necessary packages
 library(readr)
 library(dplyr)
@@ -19,18 +26,34 @@ library(tidyr)
 library(cowplot)
 library(caret)
 
+#get cohort
+fname <- basename(plot_out)
+fname
+comparison =gsub(".pdf","", gsub("fprofile_ROC_","", fname))
+comparison
+cohort_1 = strsplit(comparison, "_v_")[[1]][1]
+cohort_2 = strsplit(comparison, "_v_")[[1]][2]
+cohorts_now = c(cohort_1 , cohort_2)
+cohorts_now
+
 # Load data frames, join data frames
 fprofiles <- read_tsv(fprofiles_tsv)
-libraries <- read_tsv(libraries_tsv)
 
+# load libraries with only the needed cohorts
+libraries <- read_tsv(libraries_tsv) %>%
+  filter(cohort %in% cohorts_now)
+dim(libraries)
+unique(libraries$cohort)
 colnames(fprofiles)[1]<-"fprofile"
 colnames(fprofiles)[-1] <- sub("_motifs$", "", colnames(fprofiles)[-1]) #Note the fprofiles_tsv appends _motifs to library names. Pre-processing to remove
 fprofiles_long <- pivot_longer(fprofiles, cols = -1, names_to = "library", values_to = "pct")
 data <- fprofiles_long %>%
+  filter(library %in% libraries$library) %>%
   left_join(libraries, by = "library") %>% na.omit(.)
-
+dim(data)
 #Define fprofile names and cohorts
 fprofiles_list <- unique(fprofiles$fprofile)
+unique(data$cohort)
 
 cohorts <- unique(data$cohort)
 if (length(cohorts) != 2) {
@@ -48,8 +71,9 @@ roc_plot <- ggplot() +
 
 # Get output directory from plot_out
 out_dir <- dirname(plot_out)
-
+dir.create(out_dir, showWarnings = F)
 # Loop through each fprofile to calculate and plot ROC
+
 for (fprofile_name in fprofiles_list) {
   
   subset_data <- data %>%
@@ -111,7 +135,7 @@ for (fprofile_name in fprofiles_list) {
       theme_half_open()
     
     # Save individual plot
-    individual_plot_file <- file.path(out_dir, paste0(fprofile_name, "_ROC.pdf"))
+    individual_plot_file <- file.path(out_dir, paste0(fprofile_name, "_ROC_",comparison,".pdf"))
     ggsave(individual_plot_file, plot = individual_plot, width = 8, height = 6)
     
   }, error = function(e) {
@@ -134,7 +158,7 @@ roc_plot <- roc_plot +
 
 # Print results table
 kable(roc_results, caption = "AUC and J-cutpoint for Each Fprofile")
-
+roc_plot
 # Save outputs
 write.csv(roc_results, csv_out, row.names = FALSE)
 ggsave(plot_out, plot = roc_plot, width = 10, height = 8)

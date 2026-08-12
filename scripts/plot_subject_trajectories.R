@@ -20,6 +20,16 @@ option_list <- list(
 
 opt <- parse_args(OptionParser(option_list=option_list))
 
+#opt = list(
+#  input = "/data/CCRCCDI/analysis/ccrtegs65/Analysis_NF1_training/nf1_training_set_new/analysis/cfdna_wgs/combined_dataset_health_v_MPNST.csv",
+#  data_dir = "/data/CCRCCDI/analysis/ccrtegs65/Analysis_NF1_training/nf1_training_set_new",
+#  cohort1 = "healthy",
+# # cohort2 = "MPNST",
+#  normal_control = "healthy",
+#  output = "/data/CCRCCDI/analysis/ccrtegs65/Analysis_NF1_training/nf1_training_set_new/analysis/cfdna_wgs/subject_trajectories_healthy_v_MPNST.png",
+#  log = "/data/CCRCCDI/analysis/ccrtegs65/Analysis_NF1_training/nf1_training_set_new/logs/combine_datasets/plot_subject_trajectories_healthy_v_MPNST.log"
+# )
+
 # Initialize logging
 log_message <- function(msg) {
   write(msg, file=opt$log, append=TRUE)

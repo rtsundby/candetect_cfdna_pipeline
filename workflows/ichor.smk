@@ -1,71 +1,6 @@
-import os 
-import glob
-import yaml
-
-
-#######define software path in this part#########
-current_dir = os.getcwd()
-sys.path.append(f'{current_dir}/config')
-import program
-
-# -----------------------------
-# Path expansion for strings in config (~, $VARS)
-# -----------------------------
-def resolve_config_paths(config_dict):
-    for k, v in config_dict.items():
-        if isinstance(v, str):
-            config_dict[k] = os.path.expandvars(os.path.expanduser(v))
-        elif isinstance(v, dict):
-            resolve_config_paths(v)
-        elif isinstance(v, list):
-            config_dict[k] = [os.path.expandvars(os.path.expanduser(i)) if isinstance(i, str) else i for i in v]
-
-resolve_config_paths(config)
-
-print(config)
-
-###load conda 
-ENV_FRAGENTOMICS    = config["env_fragentomics"]
-
-#########################################################
-# READ CLUSTER PER-RULE REQUIREMENTS
-#########################################################
-CLUSTERYAML = os.path.join(current_dir,"config/cluster.yaml")
-with open(CLUSTERYAML) as json_file:
-    CLUSTER = yaml.safe_load(json_file)
-
-## Create lambda functions to allow a way to insert read-in values
-## as rule directives
-getthreads=lambda rname:int(CLUSTER[rname]["threads"]) if rname in CLUSTER and "threads" in CLUSTER[rname] else int(CLUSTER["__default__"]["threads"])
-getmemg=lambda rname:CLUSTER[rname]["mem"] if rname in CLUSTER and "mem" in CLUSTER[rname] else CLUSTER["__default__"]["mem"]
-getmemG=lambda rname:getmemg(rname).replace("g","G")
-
-
-
-data_dir = config["data_dir"]
-size_selected_dir = config["data_dir"] + "/size_selected_bams"
-wig_dir = config["data_dir"] + "/wig_files"
-ichor_dir = config["data_dir"] + "/analysis/cfdna_wgs/ichorCNA"
-log_dir = config["data_dir"] + "/logs/ichor"
-
-os.makedirs(size_selected_dir, exist_ok=True)
-os.makedirs(wig_dir, exist_ok=True)
-os.makedirs(ichor_dir, exist_ok=True)
-os.makedirs(log_dir, exist_ok=True)
-
-LIBS = []
-for bam in sorted(glob.glob(data_dir + "/bams/*_filt.bam")):
-    # Remove the _filt.bam extension to get just the sample name
-    sample_name = os.path.basename(bam).replace("_filt.bam", "")
-    LIBS.append(sample_name)
-print(LIBS)
-
-rule all:
-    input:
-        expand(size_selected_dir + "/{samples}.ss.bam", samples=LIBS),
-        expand(wig_dir + "/{samples}.wig", samples=LIBS),
-        expand(ichor_dir + "/{samples}/{samples}.cna.seg", samples=LIBS),
-        ichor_dir + "/tf.csv",
+###################################################################################################
+######rules for ichor cna analysis
+###################################################################################################
 
 rule size_select:
     input:
@@ -73,19 +8,19 @@ rule size_select:
     output:
         ss_bam = size_selected_dir + "/{samples}.ss.bam",
     log:
-        log_dir + "/size_select/{samples}.log",
+        logdir_ichor + "/size_select/{samples}.log",
     conda:
         ENV_FRAGENTOMICS
     params:
         out_dir = size_selected_dir,
-        log_dir = log_dir + "/size_select",
+        logdir_ichor = logdir_ichor + "/size_select",
         min_size = config["min_fragment_size"],
         max_size = config["max_fragment_size"],
         threads = getthreads("size_select")
     shell:
         """
         mkdir -p {params.out_dir}
-        mkdir -p {params.log_dir}
+        mkdir -p {params.logdir_ichor}
         
         #module load samtools
         samtools view -h {input.bam_file} -@ {params.threads} | \
@@ -100,7 +35,7 @@ rule read_counter:
     output:
         wig_file = wig_dir + "/{samples}.wig",
     log:
-        log_dir + "/wig_files/{samples}.log",
+        logdir_ichor + "/wig_files/{samples}.log",
     conda:
         ENV_FRAGENTOMICS
     params:
@@ -108,11 +43,11 @@ rule read_counter:
         quality		= config["quality"],
         chrs		= config["chromosomes"],
         out_dir = wig_dir,
-        log_dir = log_dir + "/wig_files",
+        logdir_ichor = logdir_ichor + "/wig_files",
     shell:
         """
         mkdir -p {params.out_dir}
-        mkdir -p {params.log_dir}
+        mkdir -p {params.logdir_ichor}
 
         readCounter \
         -w {params.window} \
@@ -134,7 +69,7 @@ rule ichorCNA:
         #seg="results/ichorCNA/{tumor}/{tumor}.seg",
         #rdata="results/ichorCNA/{tumor}/{tumor}.RData"
     log:
-        log_dir + "/ichorCNA/{tumor}.log",
+        logdir_ichor + "/ichorCNA/{tumor}.log",
     conda:
         ENV_FRAGENTOMICS
     params:
@@ -159,7 +94,7 @@ rule ichorCNA:
         txnE              = config["ichorCNA_txnE"],
         txnStrength       = config["ichorCNA_txnStrength"],
         out_dir           = ichor_dir + "/{tumor}",
-        log_dir           = log_dir + "/ichorCNA",
+        logdir_ichor           = logdir_ichor + "/ichorCNA",
 
         #### UNUSED OPTIONS
         # includeHOMD=config["ichorCNA_includeHOMD"],
@@ -175,7 +110,7 @@ rule ichorCNA:
     shell:
         """
         mkdir -p {params.out_dir}
-        mkdir -p {params.log_dir}
+        mkdir -p {params.logdir_ichor}
         
         Rscript {params.rscript} \
         --libdir {params.libdir} \
@@ -218,20 +153,20 @@ rule ichorCNA:
 rule features: 
     input:
         ichor_dir = directory(ichor_dir),
-        cna_files = expand(ichor_dir + "/{samples}/{samples}.cna.seg", samples=LIBS)
+        cna_files = expand(ichor_dir + "/{samples}/{samples}.cna.seg", samples=FRAG_LIBS)
     output:
         tf_csv = ichor_dir + "/tf.csv"
     log:
-        log_dir + "/features/features.log"
+        logdir_ichor + "/features/features.log"
     conda:
         ENV_FRAGENTOMICS
     params:
         script = "scripts/features.py",
-        log_dir = log_dir + "/features"
+        logdir_ichor = logdir_ichor + "/features"
     shell:
         """
         # Create log directory
-        mkdir -p {params.log_dir}
+        mkdir -p {params.logdir_ichor}
 
         # Check if Python script exists
         if [ ! -f {params.script} ]; then

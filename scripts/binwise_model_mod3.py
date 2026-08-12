@@ -51,11 +51,12 @@ os.makedirs(probs_dir, exist_ok=True)
 # Prepare data
 print("\n\n---------------- Preparing Data ----------------\n")
 cohorts_df = pd.read_csv(SAMPLELIST, sep='\t', index_col=0)
-cohorts_df = cohorts_df.loc[cohorts_df["cohort"].isin([COHORT1,COHORT2])]
+#cohorts_df = cohorts_df.loc[cohorts_df["cohort"].isin([COHORT1,COHORT2])]
 # enforce ordering
-cohorts_df["cohort_int"] = cohorts_df["cohort"].map({COHORT1: 0, COHORT2: 1})
-cohorts_df['index_col'] = cohorts_df.index
-cohorts_df = cohorts_df.sort_values(['cohort_int', 'index_col'])
+#cohorts_df["cohort_int"] = cohorts_df["cohort"].map({COHORT1: 0, COHORT2: 1})
+cohorts_df["cohort_int"] = 0
+#cohorts_df['index_col'] = cohorts_df.index
+#cohorts_df = cohorts_df.sort_values(['cohort_int', 'index_col'])
 cohorts_df = cohorts_df[["cohort_int"]].rename(columns={'cohort_int':'cohort'})
 
 z_df = pd.read_csv(ARMZ_CSV, index_col=0)

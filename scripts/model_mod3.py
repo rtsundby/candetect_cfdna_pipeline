@@ -6,8 +6,8 @@ import timeit
 
 RANDOM_SEED = 0
 N_PARAMS = 20  # number of values for C to test
-N_SPLITS = 1  # number of validation folds (k), original value is 5
-N_REPEATS = 1  # number of k-fold validation iterations ##original value is 10
+N_SPLITS = 5  # number of validation folds (k), original value is 5
+N_REPEATS = 10  # number of k-fold validation iterations ##original value is 10
 
 PARAM_GRID = {
     "logisticregression__C": [10**x for x in np.arange(1, 5 + ((5-1)/N_PARAMS), (5-1)/N_PARAMS)], # C = 1/lambda

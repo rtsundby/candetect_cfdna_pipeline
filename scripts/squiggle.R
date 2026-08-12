@@ -12,17 +12,26 @@ libs_rds = args[3] #"~/mpnst/data-model/libraries_full.rds"
 arms_tsv = args[4] #"~/mpnst/ref/hg38_chr_arms.tsv"
 #bins_tsv = args[2]#~/mpnst/ref/keep_5mb.bed"
 
+setwd("/data/CCRCCDI/analysis/ccrtegs65/Analysis_NF1_training/nf1_training_set_new/analysis/cfdna_wgs")
+ratios_tsv = "bin_wise_fragmentomics/ratios.tsv" #"~/mpnst/analysis/cfdna-wgs/frag/ratios.tsv"
+train_tsv = "/data/CCRCCDI/analysis/ccrtegs65/nf1_fragmentomics_data_11-3-23/inputs/cfdna_wgs_training.fixed.tsv" #"~/mpnst/analysis/cfdna-wgs/lists/cfdna_wgs_training.tsv"
+libs_rds =  "/data/CCRCCDI/analysis/ccrtegs65/nf1_fragmentomics_data_11-3-23/inputs/libraries_full.rds" #"~/mpnst/data-model/libraries_full.rds"
+arms_tsv = "bin_wise_fragmentomics/binwise_armz.clean.csv" #"~/mpnst/ref/hg38_chr_arms.tsv"
+bins_tsv = "bin_wise_fragmentomics/" #args[2]#~/mpnst/ref/keep_5mb.bed"
+
 # Load required packages, data, and functions
 library(tidyverse)
-ratios = read_tsv(ratios_tsv)
+ratios = read_csv(ratios_tsv)
+head(ratios)
 bins = read_tsv(bins_tsv, col_names = c("chr","start","end","gc")) %>% mutate(bin = paste0(chr, "_", start, "_", end))
-arms = read_tsv(arms_tsv)
+arms = read_csv(arms_tsv)
+arms
 train = read_tsv(train_tsv)
-libraries_full = readRDS(libraries_full_rds)
-
+libraries_full = readRDS(libs_rds)
+colnames(train)
 libs =
   train %>%
-  left_join(libraries_full) %>%
+  left_join(libraries_full,by="library") %>%
   mutate(dx_simple = ifelse(dx_simple == "mpnst" & washout == "y", "pretx",
                      ifelse(dx_simple == "mpnst" & washout == "n", "ontx", dx_simple))) %>%
   select(library, dx_simple) %>%

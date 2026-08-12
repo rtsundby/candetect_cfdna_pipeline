@@ -45,7 +45,9 @@ status <- list(
   nmf = FALSE,
   binwise = FALSE
 )
-
+log_message <- function(...) {
+  message(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), " ", ...)
+}
 # Function to read and merge data
 read_and_merge_data <- function(file_path, id_col, value_cols, id_col_combined="library") {
   tryCatch({
@@ -65,6 +67,7 @@ read_and_merge_data <- function(file_path, id_col, value_cols, id_col_combined="
     tibble(!!id_col := character(), !!!setNames(rep(list(numeric()), length(value_cols)), value_cols))
   })
 }
+
 
 # Read samples config
 log_message("Reading samples config file")
@@ -178,7 +181,7 @@ if (!is.null(opt$nmf) && file.exists(opt$nmf)) {
     nmf_scores_df <- read_and_merge_data(nmf_scores_files[1], "library", c("med_score"))
     combined_df <- combined_df %>%
       left_join(nmf_scores_df, by = "library") %>%
-      rename(nmf = med_score)
+      rename(nmf_prob = med_score)
     status$nmf <- TRUE
   } else {
     log_message(glue("Warning: No NMF scores file found for n_components={best_n_components}"))
@@ -200,7 +203,7 @@ if (!is.null(opt$binwise) && file.exists(opt$binwise)) {
   binwise_df <- binwise_df %>%
     pivot_longer(cols = starts_with("repeat_"), names_to = "repeat", values_to = "prob") %>%
     group_by(library) %>%
-    summarize(binwise_prob = mean(prob)) %>%
+    summarize(binwise_prob = median(prob)) %>%
     mutate(library = str_to_upper(library))  # Ensure consistent case
   
   # Join with combined dataset

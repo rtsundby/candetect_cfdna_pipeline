@@ -23,6 +23,9 @@ control_term <- args[3]
 frag_counts_file <- args[4]
 output_file <- args[5]
 
+existing <- if (length(args) >= 6 && !is.na(args[6]) && nzchar(args[6])) args[6] else "no"
+has_existing <- existing != "no"
+
 # Read input files
 cytoband = read_tsv(cytoband_file, 
                     col_names = c("chr","start","end","band","stain"),
@@ -33,8 +36,11 @@ cytoband = read_tsv(cytoband_file,
                       band = col_character(),
                       stain = col_character()
                     ))
-frag_counts <- read_tsv(frag_counts_file)
+
 sample_list <- read_tsv(sample_list_file)
+frag_counts <- read_tsv(frag_counts_file) %>%
+  filter(library %in% sample_list$library)
+length(unique(frag_counts$library))
 
 # Data cleaning and validation
 # Remove any rows with NA/NaN/Inf values
@@ -116,11 +122,21 @@ arms <- arms[,armmean:=armmean - mean(armmean, na.rm = TRUE)]
 arms_tib <- as_tibble(arms)
 
 # Get mean and sd of healthy libs
-healthy_arms =
-  arms_tib %>%
-  filter(library %in% healthy_libs) %>%
-  group_by(chr,arm) %>%
-  summarize(mean = mean(armmean, na.rm = T), sd = sd(armmean, na.rm=T)) 
+if (!has_existing) {
+  print("no existing healthy mean and sd")
+  healthy_arms =
+    arms_tib %>%
+    filter(library %in% healthy_libs) %>%
+    group_by(chr,arm) %>%
+    summarize(mean = mean(armmean, na.rm = T), sd = sd(armmean, na.rm=T)) 
+  
+  output_file1 = gsub(basename(output_file),"binwise_armz_healthy_mean_sd.csv",output_file)
+  write.csv(healthy_arms, file = output_file1, row.names=F,quote = F)
+} else {
+  print("using existing healthy mean and sd")
+  healthy_arms = read.csv(existing,header=T)
+}
+head(healthy_arms)
 
 # z-score against the healthy cohort
 arm_z =  

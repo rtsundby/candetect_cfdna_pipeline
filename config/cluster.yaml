@@ -4,7 +4,7 @@ __default__:
     gres: lscratch:200
     mem: 30g
     partition: norm
-    time: 00-48:00:00
+    time: 00-24:00:00
     threads: 16
     name: "{rule}.{wildcards}"
     output: "logs/{rule}.${{SLURM_JOBID}}.%j.{wildcards}.out"
@@ -27,11 +27,11 @@ frag_fastp:
     threads: 16
 frag_align:
     mem: 120g
-    time: 04-12:00:00
+    time: 01-12:00:00
     threads: 24
 frag_dedup:
     mem: 60g
-    time: 04-12:00:00
+    time: 01-12:00:00
     threads: 24
 frag_filter_alignment:
     mem: 60g
@@ -43,134 +43,134 @@ frag_fastqc:
     threads: 16
 frag_alignment_qc:
     mem: 64g
-    time: 00-96:00:00
+    time: 00-48:00:00
     threads: 16
 frag_picard_depth:
     mem: 110g
-    time: 00-96:00:00
+    time: 00-48:00:00
     threads: 40
 frag_bampefragsize:
     mem: 110g
     partition: norm
-    time: 10-00:00:00
+    time: 2-00:00:00
     threads: 16
 frag_bamcoverage:
     mem: 110g
     partition: norm
-    time: 10-00:00:00
+    time: 2-00:00:00
     threads: 16
 frag_plotcoverage:
     mem: 110g
     partition: norm
-    time: 10-00:00:00
+    time: 2-00:00:00
     threads: 16
 filt_bam_to_frag_bed:
     mem: 110g
     partition: norm
-    time: 10-00:00:00
+    time: 2-00:00:00
     threads: 32
 gc_distro:
     mem: 60g
     partition: norm
-    time: 10-00:00:00
+    time: 2-00:00:00
     threads: 8
 healthy_gc:
     mem: 32g
     partition: norm
-    time: 10-00:00:00
+    time: 2-00:00:00
     threads: 8
 frag_gc_sample:
     mem: 32g
     partition: norm
-    time: 10-00:00:00
+    time: 2-00:00:00
     threads: 8
 frag_sum:
     mem: 64g
     partition: norm
-    time: 10-00:00:00
+    time: 2-00:00:00
     threads: 16
 frag_window_count:
     mem: 110g
     partition: norm
-    time: 10-00:00:00
+    time: 2-00:00:00
     threads: 40
 frag_count_merge:
     mem: 200g
     partition: norm
-    time: 10-00:00:00
+    time: 2-00:00:00
     threads: 16
 unit_cent_sd:
     mem: 32g
     partition: norm
-    time: 10-00:00:00
+    time: 2-00:00:00
     threads: 8
 binwise_armz_raw:
     mem: 32g
     partition: norm
-    time: 10-00:00:00
+    time: 2-00:00:00
     threads: 8
 binwise_features:
     mem: 32g
     partition: norm
-    time: 10-00:00:00
+    time: 2-00:00:00
     threads: 8
 binwise_model:
     mem: 32g
     partition: norm
-    time: 10-00:00:00
+    time: 2-00:00:00
     threads: 8
 binwise_aucs:
     mem: 32g
     partition: norm
-    time: 10-00:00:00
+    time: 2-00:00:00
     threads: 8
 plot_probs:
     mem: 32g
     partition: norm
-    time: 10-00:00:00
+    time: 2-00:00:00
     threads: 8
 plot_coeff_heatmaps:
     mem: 32g
     partition: norm
-    time: 10-00:00:00
+    time: 2-00:00:00
     threads: 8
 bam_to_motif:
     mem: 60g
     partition: norm
-    time: 10-00:00:00
+    time: 2-00:00:00
     threads: 16
 motif_merge:
     mem: 60g
     partition: norm
-    time: 10-00:00:00
+    time: 2-00:00:00
     threads: 8
 mds:
     mem: 32g
     partition: norm
-    time: 10-00:00:00
+    time: 2-00:00:00
     threads: 8
 f_profile:
     mem: 32g
     partition: norm
-    time: 10-00:00:00
+    time: 2-00:00:00
     threads: 8
 f_profile_plot:
     mem: 32g
     partition: norm
-    time: 10-00:00:00
+    time: 2-00:00:00
     threads: 8
 fprofile_roc_plots:
     mem: 32g
     partition: norm
-    time: 10-00:00:00
+    time: 2-00:00:00
     threads: 8
 size_select:
     mem: 64g
     partition: norm
-    time: 10-00:00:00
+    time: 2-00:00:00
     threads: 16
 read_counter:
     mem: 64g
     partition: norm
-    time: 10-00:00:00
+    time: 2-00:00:00
     threads: 16

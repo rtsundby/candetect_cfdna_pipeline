@@ -126,6 +126,8 @@ def count_motifs(result, motif_length):
 def write_output(output_file, motifs):
     with open(output_file, 'w') as f:
         for motif, count in sorted(motifs.items()):
+            if 'N' in motif.upper():
+                continue
             f.write(f"{motif}\t{count}\n")
 
 # --- Main Guard --- #

@@ -62,7 +62,8 @@ common = probs_df.index.intersection(dx_df.index)
 if common.empty:
     print("WARNING: No matching indices between probs and samplelist — cohort columns will be NaN")
 probs_df["cohort"] = dx_df.loc[common, "cohort"] if not common.empty else None
-probs_df["cohort_int"] = probs_df["cohort"].map({args.cohort1: 0, args.cohort2: 1})
+#probs_df["cohort_int"] = probs_df["cohort"].map({args.cohort1: 0, args.cohort2: 1})
+probs_df["cohort_int"] = probs_df["cohort"]
 
 probs_df.to_csv(args.out_csv)
 print(f"Scores written to: {args.out_csv}")
