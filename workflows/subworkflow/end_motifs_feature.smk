@@ -12,7 +12,7 @@ rule bam_to_motif:
         ENV_FRAGENTOMICS,
     params:
         fasta = genome_fasta,
-        script = frag_scriptdir + "/sample_motifs.py",
+        script = frag_scriptdir + "/extract_5p_motifs.sh",
         threads = getthreads("bam_to_motif"),
         out_dir = motif_dir,
         log_dir = logdir_motif + "/motifs/bam_to_motif",
@@ -22,8 +22,11 @@ rule bam_to_motif:
         mkdir -p {params.out_dir} 
         #module load python/3.9 samtools bedtools
         unset PYTHONPATH
-        python {params.script} --bam_file {input} --output_file {output} --motif_length 4 \
-        --threads {params.threads} --num_reads 100000 --reference_genome {params.fasta} \
+        bash {params.script} \
+        {input} \
+        {params.fasta} \
+        {output} \
+        {params.threads} \
         > {log} 2>&1
         """
 # Merge short and long fragment counts by genomic poistion for all libraries
@@ -37,14 +40,14 @@ rule motif_merge:
         ENV_FRAGENTOMICS,
     params:
         motif_tsv_dir = motif_dir,
-        script = frag_scriptdir + "/motif_data_count.R",
+        script = frag_scriptdir + "/aggregate_motif_counts.py",
         out_dir = data_dir + "/analysis/cfdna_wgs/features",
         log_dir = logdir_motif + "/motifs/motif_merge",
     shell:
         """
         mkdir -p {params.log_dir}
         mkdir -p {params.out_dir} 
-        Rscript  {params.script} \
+        python {params.script} \
         {params.motif_tsv_dir} \
         {output.combined_counts} \
         {output.combined_fractions} \
