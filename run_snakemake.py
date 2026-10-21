@@ -81,7 +81,7 @@ snakemake -s {workflow} \\
     --latency-wait 600 \\
     --use-conda --conda-frontend mamba \\
     -k --stats stats/snakemake_$(date +"%Y%m%d%H%M%S").stats \\
-    --rerun-incomplete --restart-times 0 \\
+    --rerun-incomplete  --rerun-triggers mtime --restart-times 0 \\
     -j 300 --printshellcmds \\
     --cluster-config config/cluster.yaml \\
     --cluster "sbatch --gres {{cluster.gres}} --cpus-per-task {{cluster.threads}} -p {{cluster.partition}} -t {{cluster.time}} --mem {{cluster.mem}} --job-name {{cluster.name}} --output {{cluster.output}} --error {{cluster.error}}" \\
